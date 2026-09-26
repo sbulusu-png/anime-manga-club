@@ -33,6 +33,19 @@
   --verdict-go-soft: #dff3e6;
   --verdict-perfect: #6b2fd6;
   --verdict-perfect-soft: #efe7fe;
+  /*
+   * Backdrop (decorative, behind content). Strengths are measured: even where the
+   * strongest glow, a speed line and a halftone dot overlap, muted, red and link text
+   * stay at 4.5:1 or better (light worst 4.54:1, dark 4.77:1).
+   */
+  --glow-1: rgb(255 158 196 / 0.24); /* sakura */
+  --glow-2: rgb(140 196 255 / 0.22); /* sky */
+  --glow-3: rgb(196 168 255 / 0.2); /* lavender */
+  --halftone: rgb(214 40 57 / 0.05);
+  --speedline: rgb(27 24 48 / 0.035);
+  --petal-1: #ffc2d6;
+  --petal-2: #ff8fb3;
+  --petal-opacity: 0.75;
 }
 
 .dark {
@@ -58,6 +71,14 @@
   --verdict-go-soft: #102e1d;
   --verdict-perfect: #c6a8ff;
   --verdict-perfect-soft: #2a1f47;
+  --glow-1: rgb(214 40 57 / 0.2); /* crimson neon */
+  --glow-2: rgb(124 77 255 / 0.2); /* violet */
+  --glow-3: rgb(56 110 255 / 0.13); /* night blue */
+  --halftone: rgb(255 255 255 / 0.055);
+  --speedline: rgb(255 255 255 / 0.03);
+  --petal-1: #ffb3cc;
+  --petal-2: #e0527f;
+  --petal-opacity: 0.4;
 }
 
 @theme inline {
@@ -140,5 +161,82 @@
   }
   .skip-link:focus {
     top: 1rem;
+  }
+
+  /*
+   * Anime backdrop (components/anime-backdrop.tsx): fixed behind the page, so it paints
+   * once and scrolling never repaints it. Petals animate transform only (compositor).
+   */
+  .anime-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .anime-backdrop > div {
+    position: absolute;
+    inset: 0;
+  }
+  .anime-backdrop__glow {
+    background:
+      radial-gradient(40rem 28rem at 0% 0%, var(--glow-1), transparent 70%),
+      radial-gradient(36rem 26rem at 100% 12%, var(--glow-2), transparent 70%),
+      radial-gradient(44rem 30rem at 70% 100%, var(--glow-3), transparent 70%);
+  }
+  /* Manga speed lines radiating from the top-right corner, fading before the middle. */
+  .anime-backdrop__speedlines {
+    background: repeating-conic-gradient(
+      from 180deg at 100% 0%,
+      var(--speedline) 0deg 0.5deg,
+      transparent 0.5deg 2.5deg
+    );
+    mask-image: radial-gradient(
+      circle at 100% 0%,
+      transparent 12rem,
+      #000 20rem,
+      transparent 42rem
+    );
+  }
+  /* Halftone dots, like a printed manga panel, in two opposite corners. */
+  .anime-backdrop__halftone {
+    background-image: radial-gradient(var(--halftone) 1.3px, transparent 1.8px);
+    background-size: 14px 14px;
+    mask-image:
+      radial-gradient(34rem 24rem at 0% 100%, #000, transparent 75%),
+      radial-gradient(28rem 20rem at 100% 0%, #000, transparent 75%);
+  }
+  .anime-backdrop__petal {
+    position: absolute;
+    top: 0;
+    left: var(--x);
+    width: var(--size);
+    height: calc(var(--size) * 0.8);
+    border-radius: 150% 0 150% 0;
+    background: linear-gradient(135deg, var(--petal-1), var(--petal-2));
+    opacity: var(--petal-opacity);
+    animation: petal-fall var(--duration) linear var(--delay) infinite;
+    will-change: transform;
+  }
+  @keyframes petal-fall {
+    from {
+      transform: translate3d(0, -5vh, 0) rotate(0deg);
+    }
+    50% {
+      transform: translate3d(var(--sway), 50vh, 0) rotate(200deg);
+    }
+    to {
+      transform: translate3d(0, 105vh, 0) rotate(400deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .anime-backdrop__petal {
+      display: none;
+    }
+  }
+  @media print {
+    .anime-backdrop {
+      display: none;
+    }
   }
 }

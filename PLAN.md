@@ -156,6 +156,7 @@ Installed Claude plugins used: **gsap-skills** (all frontend motion), **graphify
 - The API no longer crashes when Neon drops an idle connection (pool errors are logged and the pool reconnects; tested)
 - Credits page and `CREDITS.md`; README with a Mermaid architecture diagram built from the graphify graph
 - Fly.io deploy prep for the API: multi-stage `Dockerfile`, `fly.toml` (Singapore, health checks, migrations as the release step via `dist/scripts/migrate.js`), `.dockerignore`, and `apps/api/DEPLOY.md` with the secrets checklist. Built and run with Docker against Neon: a 407 MB image (API production packages only, non-root), the migration release step, working endpoints and a clean shutdown
+- Anime backdrop behind every page, in both themes: colour glows (sakura and sky by day, crimson and violet neon at night), manga speed lines and halftone dots, and drifting sakura petals (hidden for reduced motion). CSS only, no images or JavaScript; strengths measured so text stays at 4.5:1 or better
 - Checks: 263 API tests, 24 e2e tests, lint, format and types clean; both apps build
 
 Later (only when asked):

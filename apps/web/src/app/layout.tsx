@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bangers, Inter } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { AnimeBackdrop } from "@/components/anime-backdrop";
 import { Providers } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     // next-themes sets the theme class before React hydrates, hence the warning suppression.
     <html lang="en" suppressHydrationWarning className={`${bangers.variable} ${inter.variable}`}>
       <body className="flex min-h-dvh flex-col bg-bg font-sans text-ink antialiased">
+        <AnimeBackdrop />
         <Providers>
           <a href="#main" className="skip-link">
             Skip to content
