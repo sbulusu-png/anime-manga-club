@@ -8,6 +8,7 @@
     "dev": "next dev --port 3000",
     "build": "next build",
     "start": "next start --port 3000",
+    "typegen": "next typegen",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {

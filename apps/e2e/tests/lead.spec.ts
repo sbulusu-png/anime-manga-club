@@ -14,8 +14,13 @@ test("a club lead plans next week's pick privately, edits it and removes it", as
   await expect(page.getByText("Upcoming")).toBeVisible();
   const week = new URL(page.url()).searchParams.get("week") ?? "";
 
-  // Find a title and add it with a note.
-  await page.getByLabel("Find a title").fill("an");
+  // Find a title and add it with a note. Search for one the catalog really has, so this
+  // works on the small CI catalog as well as a full one.
+  const catalog = await page.request.get("/api/media?sort=popularity&limit=1");
+  const { items } = (await catalog.json()) as { items: { title: { display: string } }[] };
+  const query = items[0]?.title.display.split(" ").find((word) => word.length >= 3) ?? "";
+  expect(query, "the catalog should have at least one title").not.toBe("");
+  await page.getByLabel("Find a title").fill(query);
   const pick = page.getByRole("button", { name: "Pick", exact: true }).first();
   await expect(pick).toBeVisible();
   await pick.click();
