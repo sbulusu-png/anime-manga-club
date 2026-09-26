@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "lib": ["es2024", "dom"],
+    // Playwright compiles the tests itself, so resolve modules the way a bundler does.
+    "module": "esnext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["tests", "playwright.config.ts"]
+}

@@ -1,0 +1,16 @@
+# Keep secrets, dependencies and build output out of the Docker build context.
+.env
+.env.*
+!.env.example
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+.git
+.github
+graphify-out
+design
+apps/e2e/.auth
+test-results
+playwright-report
+**/*.log

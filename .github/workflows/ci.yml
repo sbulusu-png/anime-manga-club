@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+
+  # The unit tests use PGlite (Postgres compiled to WebAssembly). This job proves the
+  # migrations, triggers and extensions also work on the real Postgres we deploy to.
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: amc
+          POSTGRES_PASSWORD: amc
+          POSTGRES_DB: amc
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U amc"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL_UNPOOLED: postgresql://amc:amc@localhost:5432/amc
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+        working-directory: .
+      - name: Schema and migrations are in sync
+        run: npm run db:check-drift
+      - name: Apply every migration
+        run: npm run db:migrate
+      - name: Re-running migrations is a no-op
+        run: npm run db:migrate
+      - name: Smoke-test triggers, constraints and extensions
+        run: npm run db:smoke
+
+  # The whole site in a real browser: Playwright journeys plus axe accessibility scans,
+  # against the website and API running on a real Postgres (seeded by the tests).
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: amc
+          POSTGRES_PASSWORD: amc
+          POSTGRES_DB: amc
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U amc"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://amc:amc@localhost:5432/amc
+      DATABASE_URL_UNPOOLED: postgresql://amc:amc@localhost:5432/amc
+      # A throwaway secret for this job only; production sets its own.
+      BETTER_AUTH_SECRET: ci-only-secret-that-is-at-least-32-characters
+      BETTER_AUTH_URL: http://localhost:3000
+      WEB_ORIGIN: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate --workspace @amc/api
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/e2e
+      - run: npm run test:e2e
+      - name: Keep the report when something fails
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: apps/e2e/playwright-report/
+          retention-days: 7

@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+/* next-themes puts .dark on <html>; `dark:` utilities follow it, not the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. Every text/background pair meets WCAG AA (4.5:1) in both themes,
+ * measured: ink/bg 16-18:1, muted/bg 6.2-8.2:1, white on accent 4.97:1, accent-text on
+ * bg and accent-soft 5.3-7.2:1. Use `accent` for fills and `accent-text` for red text:
+ * in dark mode no single red can do both.
+ */
+:root {
+  color-scheme: light;
+  --bg: #f7f5ff;
+  --surface: #ffffff;
+  --surface-2: #efeafc;
+  --ink: #1b1830;
+  --muted: #5d5878;
+  --border: #dcd6ee;
+  --accent: #d62839;
+  --accent-ink: #ffffff;
+  --accent-text: #b91c2c;
+  --accent-soft: #fde4e6;
+  --link: #2451c4;
+  --focus: #2f6fed;
+  --shadow: 0 1px 2px rgb(27 24 48 / 0.06), 0 8px 24px rgb(27 24 48 / 0.08);
+  /* Verdicts: text colour, and a soft fill for badges and bars. */
+  --verdict-skip: #545d6b;
+  --verdict-skip-soft: #eceef2;
+  --verdict-timepass: #8a4f00;
+  --verdict-timepass-soft: #fcefd6;
+  --verdict-go: #146c36;
+  --verdict-go-soft: #dff3e6;
+  --verdict-perfect: #6b2fd6;
+  --verdict-perfect-soft: #efe7fe;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: #0b0a10;
+  --surface: #15131e;
+  --surface-2: #1e1b2b;
+  --ink: #f5f3ff;
+  --muted: #a9a3c2;
+  --border: #2c2840;
+  --accent: #d62839;
+  --accent-ink: #ffffff;
+  --accent-text: #ff6b76;
+  --accent-soft: #3a1419;
+  --link: #8fb0ff;
+  --focus: #8fb0ff;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+  --verdict-skip: #b3bac6;
+  --verdict-skip-soft: #262a32;
+  --verdict-timepass: #f4b64a;
+  --verdict-timepass-soft: #33270f;
+  --verdict-go: #5fd68f;
+  --verdict-go-soft: #102e1d;
+  --verdict-perfect: #c6a8ff;
+  --verdict-perfect-soft: #2a1f47;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-text: var(--accent-text);
+  --color-accent-soft: var(--accent-soft);
+  --color-link: var(--link);
+  --color-focus: var(--focus);
+  --color-verdict-skip: var(--verdict-skip);
+  --color-verdict-skip-soft: var(--verdict-skip-soft);
+  --color-verdict-timepass: var(--verdict-timepass);
+  --color-verdict-timepass-soft: var(--verdict-timepass-soft);
+  --color-verdict-go: var(--verdict-go);
+  --color-verdict-go-soft: var(--verdict-go-soft);
+  --color-verdict-perfect: var(--verdict-perfect);
+  --color-verdict-perfect-soft: var(--verdict-perfect-soft);
+  --shadow-card: var(--shadow);
+
+  --font-display: var(--font-bangers), "Impact", sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+  }
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Cards added to a grid (search results, infinite scroll) fade up into place. */
+  .card-in {
+    animation: card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+  }
+
+  /* Visible only when focused with the keyboard, so keyboard users can skip the header. */
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -4rem;
+    z-index: 100;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  .skip-link:focus {
+    top: 1rem;
+  }
+}
