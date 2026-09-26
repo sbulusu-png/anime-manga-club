@@ -6,7 +6,7 @@ A full-stack website for an anime and manga club: members give titles a verdict,
 
 ## Highlights
 
-- **Verdicts, not numbers.** Members rate titles 🙅 Skip, 🍿 Timepass, 👍 Go for it or 💎 Perfection. Each title shows the club's verdict with a semicircle gauge of how the votes split.
+- **Verdicts, not numbers.** Members rate titles Skip, Timepass, Go for it or Perfection, each marked by its own colour. Each title shows the club's verdict with a semicircle gauge of how the votes split.
 - **Suggestions that say why.** "For you" blends a taste profile (genres, weighted themes and preferred formats), "members with similar taste loved this", AniList and club quality, one pick per franchise, and a reason on every card ("More Attack on Titan, which you loved", "Because you like Revenge and Military stories").
 - **Club leads' weekly picks**, planned ahead privately and published when the week starts.
 - **Accounts done properly:** email and password or Google, email confirmation, password reset, breached-password checks, a "new sign-in" email with a way to lock an intruder out, and no way to probe who is a member.

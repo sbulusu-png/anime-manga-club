@@ -11,7 +11,7 @@ import { signInHref } from "@/lib/safe-next";
 import type { Review, Viewer } from "@/lib/types";
 
 import { SpoilerText } from "../spoiler-text";
-import { VerdictBadge } from "../verdict-badge";
+import { VerdictBadge, VerdictDot } from "../verdict-badge";
 
 // Mirrors the API's limits (apps/api/src/routes/reviews.ts).
 const BODY_MIN = 10;
@@ -245,9 +245,7 @@ function ReviewForm({
                   }}
                   className="sr-only"
                 />
-                <span aria-hidden="true" className="text-2xl">
-                  {info.emoji}
-                </span>
+                <VerdictDot rating={value} className="size-6" />
                 <span className="font-bold">{info.label}</span>
                 <span className={`text-xs ${checked ? "" : "text-muted"}`}>{info.blurb}</span>
               </label>

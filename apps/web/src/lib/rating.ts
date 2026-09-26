@@ -6,17 +6,16 @@ export const RATING_INFO: Record<
   Rating,
   {
     label: string;
-    emoji: string;
     blurb: string;
     text: string;
     soft: string;
+    /** Fill in the gauge colour: legend and verdict dots. */
     bar: string;
     stroke: string;
   }
 > = {
   skip: {
     label: "Skip",
-    emoji: "🙅",
     blurb: "Not worth your time",
     text: "text-verdict-skip",
     soft: "bg-verdict-skip-soft",
@@ -25,7 +24,6 @@ export const RATING_INFO: Record<
   },
   timepass: {
     label: "Timepass",
-    emoji: "🍿",
     blurb: "Fine if you've nothing else on",
     text: "text-verdict-timepass",
     soft: "bg-verdict-timepass-soft",
@@ -34,7 +32,6 @@ export const RATING_INFO: Record<
   },
   go_for_it: {
     label: "Go for it",
-    emoji: "👍",
     blurb: "Worth watching or reading",
     text: "text-verdict-go",
     soft: "bg-verdict-go-soft",
@@ -43,7 +40,6 @@ export const RATING_INFO: Record<
   },
   perfection: {
     label: "Perfection",
-    emoji: "💎",
     blurb: "An all-time favourite",
     text: "text-verdict-perfect",
     soft: "bg-verdict-perfect-soft",

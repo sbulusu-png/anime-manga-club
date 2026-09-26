@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 
 import { RATINGS, RATING_INFO, type Rating } from "@/lib/rating";
 
+import { VerdictDot } from "./verdict-badge";
+
 const PERCENT = new Intl.NumberFormat("en", { style: "percent", maximumFractionDigits: 0 });
 
 // A half circle from the left (Skip) over the top to the right (Perfection).
@@ -87,11 +89,9 @@ export function EvaluationBar({
           const info = RATING_INFO[rating];
           const count = counts[rating];
           return (
-            <li key={rating} className="flex items-center gap-1.5">
-              <span className={`size-2.5 shrink-0 rounded-full ${info.bar}`} />
-              <span className="font-semibold">
-                {info.emoji} {info.label}
-              </span>
+            <li key={rating} className="flex items-center gap-2">
+              <VerdictDot rating={rating} className="size-3.5" />
+              <span className="font-semibold">{info.label}</span>
               <span className="ml-auto tabular-nums text-muted">
                 {count}
                 {total > 0 && ` · ${PERCENT.format(count / total)}`}

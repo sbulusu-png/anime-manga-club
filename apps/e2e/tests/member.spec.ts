@@ -24,7 +24,7 @@ test("a member reviews a title, tracks it on their list, and sees it on their pr
   await page.goto(href);
 
   // Verdict and review.
-  await page.getByText("Perfection", { exact: true }).first().click();
+  await page.locator("label", { has: page.getByRole("radio", { name: /^Perfection/ }) }).click();
   await page
     .getByRole("textbox", { name: "Your review" })
     .fill("End-to-end test review: tense, clever and beautifully animated.");
@@ -54,7 +54,7 @@ test("a member reviews a title, tracks it on their list, and sees it on their pr
   // Editing and deleting.
   await page.goto(href);
   await page.getByRole("button", { name: "Edit" }).click();
-  await page.getByText("Go for it", { exact: true }).first().click();
+  await page.locator("label", { has: page.getByRole("radio", { name: /^Go for it/ }) }).click();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("You said")).toBeVisible();
   await page.getByRole("button", { name: "Delete" }).click();

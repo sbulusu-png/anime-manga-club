@@ -127,7 +127,7 @@ Installed Claude plugins used: **gsap-skills** (all frontend motion), **graphify
 
 ### 2.5 Reviews and profiles ✅
 
-- Verdicts replace 1–10 scores: 🙅 Skip, 🍿 Timepass, 👍 Go for it, 💎 Perfection (stored 1–4; migration 0005 converts old scores). The club verdict comes with an evaluation gauge (a semicircle, Skip on the left round to Perfection on the right, each arc sized by votes, the verdict in the middle, counts and percentages below); profiles show one for the verdicts a member has given; suggestions weigh verdicts
+- Verdicts replace 1–10 scores: Skip, Timepass, Go for it, Perfection (each with its own colour dot, matching the gauge) (stored 1–4; migration 0005 converts old scores). The club verdict comes with an evaluation gauge (a semicircle, Skip on the left round to Perfection on the right, each arc sized by votes, the verdict in the middle, counts and percentages below); profiles show one for the verdicts a member has given; suggestions weigh verdicts
 - Review editor on title pages: pick a verdict, write, mark spoilers; edit and delete; likes with instant feedback (not on your own review)
 - List control on title pages: plan / watching / completed / paused / dropped, episode or chapter progress (reaching the end marks it completed)
 - `/reviews` feed (newest, or most liked this week / month / year / all time) with "more"
