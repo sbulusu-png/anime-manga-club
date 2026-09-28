@@ -118,27 +118,31 @@ describe("saving to a list", () => {
     expect((await save(alice, frieren, body)).status).toBe(400);
   });
 
+  it("no longer accepts plan to watch", async () => {
+    expect((await save(alice, frieren, { status: "planning" })).status).toBe(400);
+  });
+
   it.each([
     ["unknown titles", 999_999],
     ["adult titles", -1],
   ])("answers 404 for %s", async (_name, id) => {
-    const res = await save(alice, id === -1 ? adult : id, { status: "planning" });
+    const res = await save(alice, id === -1 ? adult : id, { status: "current" });
 
     expect(res.status).toBe(404);
   });
 
   it("requires a signed-in member with a username", async () => {
     expect(
-      (await send(app, "PUT", `/api/list/${frieren}`, { body: { status: "planning" } })).status,
+      (await send(app, "PUT", `/api/list/${frieren}`, { body: { status: "current" } })).status,
     ).toBe(401);
-    expect((await save(noName, frieren, { status: "planning" })).status).toBe(403);
+    expect((await save(noName, frieren, { status: "current" })).status).toBe(403);
   });
 });
 
 describe("reading lists", () => {
   it("shows the member's own list, most recently updated first", async () => {
     await saved(alice, frieren, { status: "current", progress: 3 });
-    await saved(alice, berserk, { status: "planning" });
+    await saved(alice, berserk, { status: "paused" });
 
     const { items } = await listOf("", alice.cookie);
     expect(items.map((e) => e.media.title.display)).toEqual(["Berserk", "Frieren"]);
@@ -156,7 +160,7 @@ describe("reading lists", () => {
   it("shows anyone's list by username, and pages through it", async () => {
     await saved(bob, frieren, { status: "completed" });
     await saved(bob, berserk, { status: "current" });
-    await saved(bob, ongoing, { status: "planning" });
+    await saved(bob, ongoing, { status: "paused" });
 
     const first = await listOf("?user=BOB&limit=2");
     const second = await listOf(`?user=bob&limit=2&cursor=${first.nextCursor ?? ""}`);

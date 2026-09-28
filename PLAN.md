@@ -73,7 +73,7 @@ Installed Claude plugins used: **gsap-skills** (all frontend motion), **graphify
 
 ### 1.6 Suggestions ✅
 
-- **Lists** (`/api/list`): planning, current (watching/reading), completed, paused, dropped, with progress; progress can't pass the known episode/chapter count and "completed" fills it in; lists are public by username (`?user=`), like on AniList
+- **Lists** (`/api/list`): current (watching/reading), completed, paused, dropped (plan to watch was removed later, migration 0006), with progress; progress can't pass the known episode/chapter count and "completed" fills it in; lists are public by username (`?user=`), like on AniList
 - **Club suggestions** (`/api/club/suggestions`): admins pick titles per week (Monday in the club's timezone, `CLUB_TIMEZONE`, default Asia/Kolkata) with an optional note; `/current` for this week, plus a paged archive; suggestions outlive their author
 - **For you** (`GET /api/recommendations`): taste profile from verdicts and list statuses (genre and tag affinities), blended with "members with similar taste loved this", quality and the club verdict; sequels and adaptations of loved series say so; at most one title per franchise; new members get popular, highly rated picks; every item explains why
 - **Similar titles** (`GET /api/media/:id/similar`): "members who loved X also loved Y", falling back to shared genres and tags; same type, other franchises only
@@ -157,7 +157,8 @@ Installed Claude plugins used: **gsap-skills** (all frontend motion), **graphify
 - Credits page and `CREDITS.md`; README with a Mermaid architecture diagram built from the graphify graph
 - Fly.io deploy prep for the API: multi-stage `Dockerfile`, `fly.toml` (Singapore, health checks, migrations as the release step via `dist/scripts/migrate.js`), `.dockerignore`, and `apps/api/DEPLOY.md` with the secrets checklist. Built and run with Docker against Neon: a 407 MB image (API production packages only, non-root), the migration release step, working endpoints and a clean shutdown
 - Anime backdrop behind every page, in both themes: colour glows (sakura and sky by day, crimson and violet neon at night), manga speed lines and halftone dots, and drifting sakura petals (hidden for reduced motion). CSS only, no images or JavaScript; strengths measured so text stays at 4.5:1 or better
-- Checks: 263 API tests, 24 e2e tests, lint, format and types clean; both apps build
+- List simplified to four statuses (Watching, Completed, Paused, Dropped) shown as a 2×2 button grid instead of a dropdown; tap the selected one again to remove the title. "Plan to watch" removed (migration 0006). The statuses still feed suggestions as taste signals
+- Checks: 264 API tests, 24 e2e tests, lint, format and types clean; both apps build
 
 Later (only when asked):
 

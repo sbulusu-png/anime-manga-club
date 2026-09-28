@@ -96,7 +96,7 @@ export interface CurrentWeek {
   items: ClubSuggestion[];
 }
 
-export type ListStatus = "planning" | "current" | "completed" | "paused" | "dropped";
+export type ListStatus = "current" | "completed" | "paused" | "dropped";
 
 export interface ListEntry {
   status: ListStatus;

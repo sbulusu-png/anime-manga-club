@@ -107,7 +107,7 @@ Requirements: Node.js 24 LTS and a PostgreSQL database (a free Neon project work
 
 | Command                                       | What it runs                                                                                                                                                              |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run check`                               | Prettier, ESLint, TypeScript and 263 API tests (Vitest against in-memory PostgreSQL)                                                                                      |
+| `npm run check`                               | Prettier, ESLint, TypeScript and 264 API tests (Vitest against in-memory PostgreSQL)                                                                                      |
 | `npm run test:e2e`                            | 24 Playwright tests in a real browser: sign-up and sign-in, reviews, lists, likes, profiles, the club lead panel, the phone menu, and axe WCAG 2.2 AA scans of every page |
 | `npm run db:check-drift --workspace @amc/api` | Fails if the schema and migrations disagree                                                                                                                               |
 

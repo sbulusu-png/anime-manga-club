@@ -3,8 +3,6 @@ import type { ListStatus } from "./types";
 /** "Watching" for anime, "Reading" for manga, and so on. */
 export function statusLabel(status: ListStatus, type: "anime" | "manga"): string {
   switch (status) {
-    case "planning":
-      return type === "anime" ? "Plan to watch" : "Plan to read";
     case "current":
       return type === "anime" ? "Watching" : "Reading";
     case "completed":

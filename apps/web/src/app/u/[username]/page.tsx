@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 const TABS = ["reviews", "anime", "manga"] as const;
 type Tab = (typeof TABS)[number];
-const STATUSES: ListStatus[] = ["current", "completed", "planning", "paused", "dropped"];
+const STATUSES: ListStatus[] = ["current", "completed", "paused", "dropped"];
 const NUMBER = new Intl.NumberFormat("en");
 const JOINED = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" });
 

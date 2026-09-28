@@ -10,14 +10,15 @@ import { statusLabel } from "@/lib/list";
 import { signInHref } from "@/lib/safe-next";
 import type { ListEntry, ListStatus, Viewer } from "@/lib/types";
 
-const STATUSES: ListStatus[] = ["planning", "current", "completed", "paused", "dropped"];
+/** Shown as a 2x2 grid: Watching and Completed on top, Paused and Dropped below. */
+const STATUSES: ListStatus[] = ["current", "completed", "paused", "dropped"];
 
 const STEP_BUTTON =
   "grid size-9 place-items-center rounded-full border border-border text-lg font-bold hover:bg-surface-2 disabled:opacity-40";
 
 /**
  * Puts the title on the member's list and tracks how far they are. Every change saves
- * straight away; "Not on my list" removes it.
+ * straight away; pressing the selected status again takes the title off the list.
  */
 export function ListControl({
   mediaId,
@@ -38,7 +39,7 @@ export function ListControl({
   const [draft, setDraft] = useState(String(initial?.progress ?? 0));
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
-  const selectId = useId();
+  const headingId = useId();
   const progressId = useId();
   const unit = type === "anime" ? "Episodes" : "Chapters";
 
@@ -110,28 +111,39 @@ export function ListControl({
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
-      <label htmlFor={selectId} className="text-sm font-semibold">
+      <p id={headingId} className="text-sm font-semibold">
         On your list
-      </label>
-      <select
-        id={selectId}
-        value={status ?? ""}
-        disabled={pending}
-        onChange={(event) => {
-          const value = event.target.value as ListStatus | "";
-          void save(value === "" ? null : value);
-        }}
-        className="w-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-ink focus:border-focus"
-      >
-        <option value="">Not on my list</option>
-        {STATUSES.map((s) => (
-          <option key={s} value={s}>
-            {statusLabel(s, type)}
-          </option>
-        ))}
-      </select>
+      </p>
+      <div role="group" aria-labelledby={headingId} className="grid grid-cols-2 gap-2">
+        {STATUSES.map((s) => {
+          const selected = status === s;
+          return (
+            <button
+              key={s}
+              type="button"
+              aria-pressed={selected}
+              disabled={pending}
+              onClick={() => {
+                void save(selected ? null : s);
+              }}
+              className={`rounded-xl border px-2 py-2.5 text-sm font-semibold disabled:cursor-wait ${
+                selected
+                  ? "border-accent bg-accent text-accent-ink"
+                  : "border-border bg-bg text-ink hover:bg-surface-2"
+              }`}
+            >
+              {statusLabel(s, type)}
+            </button>
+          );
+        })}
+      </div>
+      {status ? (
+        <p className="-mt-1 text-xs text-muted">
+          Tap {statusLabel(status, type)} again to remove it.
+        </p>
+      ) : null}
 
-      {status && status !== "planning" && (
+      {status === "current" || status === "paused" ? (
         <div className="flex flex-col gap-1.5">
           <label htmlFor={progressId} className="text-sm font-semibold">
             {unit} {type === "anime" ? "watched" : "read"}
@@ -179,10 +191,10 @@ export function ListControl({
             >
               +
             </button>
-            <span className="text-sm text-muted">of {total ?? "?"}</span>
+            <span className="whitespace-nowrap text-sm text-muted">of {total ?? "?"}</span>
           </div>
         </div>
-      )}
+      ) : null}
 
       <p
         role="status"

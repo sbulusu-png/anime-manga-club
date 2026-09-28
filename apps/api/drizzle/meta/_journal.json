@@ -43,6 +43,13 @@
       "when": 1790258732960,
       "tag": "0005_review_verdicts",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790569359211,
+      "tag": "0006_drop_planning_status",
+      "breakpoints": true
     }
   ]
 }

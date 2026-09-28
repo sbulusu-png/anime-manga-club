@@ -114,8 +114,7 @@ export function ListEntryCard({ entry }: { entry: ListEntry }) {
         <span className="font-semibold text-ink">
           {statusLabel(entry.status, entry.media.type)}
         </span>
-        {entry.status !== "planning" &&
-          ` · ${unit} ${String(entry.progress)}${entry.total ? `/${String(entry.total)}` : ""}`}
+        {` · ${unit} ${String(entry.progress)}${entry.total ? `/${String(entry.total)}` : ""}`}
       </p>
     </div>
   );

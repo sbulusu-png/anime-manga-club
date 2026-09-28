@@ -38,9 +38,15 @@ test("a member reviews a title, tracks it on their list, and sees it on their pr
     timeout: 30_000,
   });
 
-  // The list, with progress.
-  await page.getByLabel("On your list").selectOption("current");
+  // The list: four status buttons, with progress while watching.
+  const list = page.getByRole("group", { name: "On your list" });
+  await expect(list.getByRole("button")).toHaveText(["Watching", "Completed", "Paused", "Dropped"]);
+  await list.getByRole("button", { name: "Watching" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+  await expect(list.getByRole("button", { name: "Watching" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await page.getByRole("button", { name: "One episode more" }).click();
   await expect(page.getByLabel("Episodes watched")).toHaveValue("1");
 

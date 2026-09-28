@@ -128,7 +128,7 @@ describe("recommendations for you", () => {
     await review(alice, "Blade Quest", "perfection");
     await db.insert(listEntries).values([
       { userId: alice.id, mediaId: id("Sword Saga"), status: "dropped" },
-      { userId: alice.id, mediaId: id("Fist Legend"), status: "planning" },
+      { userId: alice.id, mediaId: id("Fist Legend"), status: "paused" },
     ]);
 
     const ranked = (await recommend(alice)).items.map((r) => r.media.id);
@@ -271,7 +271,8 @@ describe("signalWeight", () => {
     expect(weight("skip")).toBe(-1);
     expect(weight("go_for_it")).toBeGreaterThan(weight("timepass"));
     expect(weight("timepass")).toBeLessThan(0); // "only timepass" isn't a recommendation
-    expect(signalWeight(null, "completed")).toBeGreaterThan(signalWeight(null, "planning"));
+    expect(signalWeight(null, "completed")).toBeGreaterThan(signalWeight(null, "current"));
+    expect(signalWeight(null, "current")).toBeGreaterThan(signalWeight(null, "paused"));
     expect(signalWeight(null, "dropped")).toBeLessThan(0);
     // A verdict beats list status: "Skip" on a completed title is still a dislike.
     expect(signalWeight(ratingToValue("skip"), "completed")).toBeLessThan(0);

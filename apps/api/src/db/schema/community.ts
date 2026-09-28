@@ -78,13 +78,7 @@ export const reviewLikes = pgTable(
 );
 
 /** Watch/read progress, shown as the user's watchlist. Mirrors AniList list statuses. */
-export const listStatus = pgEnum("list_status", [
-  "planning",
-  "current",
-  "completed",
-  "paused",
-  "dropped",
-]);
+export const listStatus = pgEnum("list_status", ["current", "completed", "paused", "dropped"]);
 
 export const listEntries = pgTable(
   "list_entries",

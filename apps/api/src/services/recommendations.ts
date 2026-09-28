@@ -68,8 +68,6 @@ export function signalWeight(score: number | null, status: ListStatus | null): n
       return 0.6;
     case "current":
       return 0.4;
-    case "planning":
-      return 0.2;
     case "paused":
       return 0.1;
     case "dropped":
