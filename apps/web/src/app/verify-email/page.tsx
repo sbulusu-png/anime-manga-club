@@ -9,7 +9,7 @@ import { getCurrentUser } from "@/lib/server-api";
 export const metadata: Metadata = { title: "Confirm your email", robots: { index: false } };
 
 const BUTTON =
-  "block rounded-full bg-accent px-6 py-3 text-center font-semibold text-accent-ink hover:brightness-110";
+  "btn-comic block rounded-full bg-accent px-6 py-3 text-center font-semibold text-accent-ink";
 
 /** Where the confirmation link lands. Better Auth has already signed the member in. */
 export default async function VerifyEmailPage({ searchParams }: { searchParams: SearchParams }) {

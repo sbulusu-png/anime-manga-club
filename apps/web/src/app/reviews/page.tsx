@@ -7,6 +7,7 @@ import { ReviewCard } from "@/components/review-card";
 import { type SearchParams, param } from "@/lib/search-params";
 import { TAGS, apiGetAsViewer, getCurrentUser, viewerOf } from "@/lib/server-api";
 import type { Page, Review } from "@/lib/types";
+import { AnimeHeading } from "@/components/anime-heading";
 
 export const metadata: Metadata = {
   title: "Reviews",
@@ -43,7 +44,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Sear
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10">
       <header>
-        <h1 className="font-display text-5xl tracking-wide sm:text-6xl">Reviews</h1>
+        <AnimeHeading jp="レビュー">Reviews</AnimeHeading>
         <p className="mt-1 text-muted">
           What the club thinks. Open a title to give your own verdict.
         </p>
@@ -94,7 +95,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Sear
           action={
             <Link
               href="/browse"
-              className="rounded-full bg-accent px-5 py-2 font-semibold text-accent-ink"
+              className="btn-comic rounded-full bg-accent px-5 py-2 font-semibold text-accent-ink"
             >
               Find something to review
             </Link>

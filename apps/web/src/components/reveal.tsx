@@ -16,26 +16,26 @@ export function Reveal({ children, className }: { children: ReactNode; className
   const rootRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
-    (_context, contextSafe) => {
-      // Batches arrive after this hook has run; contextSafe keeps their tweens in the
-      // context, so they're cleaned up on unmount like everything else.
-      const reveal = contextSafe?.((batch: Element[]) =>
-        gsap.to(batch, {
-          autoAlpha: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power3.out",
-          stagger: 0.07,
-          overwrite: true,
-        }),
-      );
+    () => {
       gsap.matchMedia().add("(prefers-reduced-motion: no-preference)", () => {
         const items = gsap.utils.toArray<HTMLElement>(".reveal-item", rootRef.current);
         gsap.set(items, { autoAlpha: 0, y: 32 });
         ScrollTrigger.batch(items, {
           start: "top 90%",
           once: true,
-          onEnter: (batch) => reveal?.(batch),
+          // Deliberately not wrapped in contextSafe: for cards already on screen this
+          // fires immediately, inside the matchMedia context, and contextSafe there nests
+          // the contexts in a loop ("Maximum call stack size exceeded" when the page is
+          // left). These are short one-off fades on elements that unmount with the page.
+          onEnter: (batch) =>
+            gsap.to(batch, {
+              autoAlpha: 1,
+              y: 0,
+              duration: 0.6,
+              ease: "power3.out",
+              stagger: 0.07,
+              overwrite: true,
+            }),
         });
       });
     },

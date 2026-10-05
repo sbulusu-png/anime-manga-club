@@ -15,10 +15,10 @@ const UNAVAILABLE = "We couldn't load this right now. Please try again in a mome
 
 /** The popular shelves, one per kind (manga is Japanese; manhwa Korean; manhua Chinese). */
 const SHELVES = [
-  { kind: "anime", title: "Most popular anime" },
-  { kind: "manga", title: "Most popular manga" },
-  { kind: "manhwa", title: "Most popular manhwa" },
-  { kind: "manhua", title: "Most popular manhua" },
+  { kind: "anime", title: "Most popular anime", jp: "人気アニメ" },
+  { kind: "manga", title: "Most popular manga", jp: "人気マンガ" },
+  { kind: "manhwa", title: "Most popular manhwa", jp: "인기 만화" },
+  { kind: "manhua", title: "Most popular manhua", jp: "热门漫画" },
 ] as const;
 
 export default async function HomePage() {
@@ -48,7 +48,7 @@ export default async function HomePage() {
         <div className="flex flex-wrap justify-center gap-3">
           <Link
             href="/browse"
-            className="rounded-full bg-accent px-6 py-3 font-semibold text-accent-ink hover:brightness-110"
+            className="btn-comic rounded-full bg-accent px-6 py-3 font-semibold text-accent-ink"
           >
             Browse anime &amp; manga
           </Link>
@@ -64,6 +64,7 @@ export default async function HomePage() {
       <HomeSection
         id="club-suggestions"
         title="Club suggestions"
+        jp="部のおすすめ"
         subtitle={week ? weekLabel(week.weekStart) : undefined}
         seeAll={{ href: "/club", label: "Past weeks" }}
       >
@@ -82,13 +83,14 @@ export default async function HomePage() {
         )}
       </HomeSection>
 
-      {SHELVES.map(({ kind, title }, i) => {
+      {SHELVES.map(({ kind, title, jp }, i) => {
         const shelf = shelves[i];
         return (
           <HomeSection
             key={kind}
             id={`popular-${kind}`}
             title={title}
+            jp={jp}
             seeAll={{ href: `/browse?type=${kind}` as Route, label: "Browse all" }}
           >
             {shelf?.items.length ? (
@@ -109,6 +111,7 @@ export default async function HomePage() {
       <HomeSection
         id="latest-reviews"
         title="Latest reviews"
+        jp="最新レビュー"
         seeAll={{ href: "/reviews", label: "All reviews" }}
       >
         {!reviews ? (
@@ -118,7 +121,7 @@ export default async function HomePage() {
             action={
               <Link
                 href="/browse"
-                className="rounded-full bg-accent px-5 py-2 font-semibold text-accent-ink"
+                className="btn-comic rounded-full bg-accent px-5 py-2 font-semibold text-accent-ink"
               >
                 Find something to review
               </Link>

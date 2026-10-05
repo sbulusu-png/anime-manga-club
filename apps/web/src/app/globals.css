@@ -47,6 +47,12 @@
   --petal-2: #ff8fb3;
   --petal-opacity: 0.75;
   --rail-opacity: 0.32;
+  /* Manga panels: inked borders and hard, offset "comic" shadows. */
+  --panel-border: #1b1830;
+  --panel-shadow: #1b1830;
+  --panel-shadow-hover: #d62839;
+  --heading-shadow: #d62839;
+  --watermark: rgb(27 24 48 / 0.07);
 }
 
 .dark {
@@ -81,6 +87,11 @@
   --petal-2: #e0527f;
   --petal-opacity: 0.4;
   --rail-opacity: 0.38;
+  --panel-border: rgb(245 243 255 / 0.28);
+  --panel-shadow: rgb(214 40 57 / 0.7);
+  --panel-shadow-hover: #ff6b76;
+  --heading-shadow: #d62839;
+  --watermark: rgb(245 243 255 / 0.06);
 }
 
 @theme inline {
@@ -173,6 +184,165 @@
       opacity: 0;
       transform: translateY(16px);
     }
+  }
+
+  /*
+   * Manga look. Decoration only: text colours are untouched, so the contrast measured
+   * above still holds.
+   */
+
+  /* A manga panel: inked border, hard offset shadow. */
+  .manga-panel {
+    border: 2px solid var(--panel-border);
+    box-shadow: 4px 4px 0 var(--panel-shadow);
+  }
+  /* Panels inside a link jump towards you on hover, and their shadow turns red. */
+  .group .manga-panel {
+    transition:
+      transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+      box-shadow 0.2s;
+  }
+  .group:hover .manga-panel,
+  .group:focus-visible .manga-panel {
+    transform: translate(-3px, -3px);
+    box-shadow: 7px 7px 0 var(--panel-shadow-hover);
+  }
+  /* Speed lines that burst out behind cover art on hover. */
+  .panel-speedlines {
+    position: absolute;
+    inset: -50%;
+    pointer-events: none;
+    background: repeating-conic-gradient(
+      from 0deg,
+      rgb(255 255 255 / 0.55) 0deg 1.2deg,
+      transparent 1.2deg 7deg
+    );
+    mask-image: radial-gradient(circle, transparent 28%, #000 62%);
+    opacity: 0;
+    transform: scale(0.8);
+    transition:
+      opacity 0.25s,
+      transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .group:hover .panel-speedlines {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+
+  /* A starburst sticker, for scores on covers. */
+  .burst {
+    clip-path: polygon(
+      50% 0%,
+      61% 15%,
+      79% 9%,
+      79% 27%,
+      97% 32%,
+      86% 47%,
+      97% 62%,
+      79% 68%,
+      79% 86%,
+      61% 81%,
+      50% 97%,
+      39% 81%,
+      21% 86%,
+      21% 68%,
+      3% 62%,
+      14% 47%,
+      3% 32%,
+      21% 27%,
+      21% 9%,
+      39% 15%
+    );
+  }
+
+  /* A speech bubble with a tail at the bottom left (review cards). */
+  .speech-bubble {
+    position: relative;
+    margin-bottom: 14px;
+  }
+  .speech-bubble::after {
+    content: "";
+    position: absolute;
+    left: 28px;
+    bottom: -14px;
+    width: 24px;
+    height: 14px;
+    background: var(--panel-border);
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+  .speech-bubble::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    left: 30px;
+    bottom: -9px;
+    width: 18px;
+    height: 10px;
+    background: var(--surface);
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+
+  /* Bold call-to-action buttons: inked outline, hard shadow, presses down on click. */
+  .btn-comic {
+    border: 2px solid var(--panel-border);
+    box-shadow: 3px 3px 0 var(--panel-shadow);
+    transition:
+      transform 0.1s,
+      box-shadow 0.1s;
+  }
+  .btn-comic:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--panel-shadow);
+  }
+  .btn-comic:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--panel-shadow);
+  }
+
+  /*
+   * Anime title-card headings (components/anime-heading.tsx): the title with a red
+   * offset shadow and a brush stroke under it, over a big faint Japanese watermark.
+   */
+  .anime-heading {
+    position: relative;
+    isolation: isolate;
+  }
+  /* Watermarks may reach past a phone's edge: clip them there (clip, unlike hidden,
+     doesn't make a scroll container, so the sticky header still works). */
+  main {
+    overflow-x: clip;
+  }
+  .anime-heading__text {
+    text-shadow: 3px 3px 0 var(--heading-shadow);
+  }
+  .anime-heading__text::after {
+    content: "";
+    display: block;
+    width: 3.5rem;
+    height: 0.35rem;
+    margin-top: 0.35rem;
+    border-radius: 999px 40% 999px 40%;
+    background: var(--accent);
+    transform: skewX(-20deg);
+  }
+  .anime-heading__jp {
+    position: absolute;
+    z-index: -1;
+    left: -0.1em;
+    top: 50%;
+    /* Same size class as the title, scaled up so it looms behind it. */
+    transform: translateY(-62%) scale(1.7);
+    transform-origin: left center;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    color: var(--watermark);
+    pointer-events: none;
+    user-select: none;
+  }
+  .anime-heading__jp::before {
+    content: attr(data-jp);
   }
 
   /* Visible only when focused with the keyboard, so keyboard users can skip the header. */

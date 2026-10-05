@@ -7,6 +7,7 @@ import { type SearchParams, param } from "@/lib/search-params";
 import { TAGS, apiGet, getCurrentUser } from "@/lib/server-api";
 import type { ClubSuggestion, CurrentWeek, Page } from "@/lib/types";
 import { weekLabel } from "@/lib/week";
+import { AnimeHeading } from "@/components/anime-heading";
 
 export const metadata: Metadata = {
   title: "Club suggestions",
@@ -42,7 +43,7 @@ export default async function ClubPage({ searchParams }: { searchParams: SearchP
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-5xl tracking-wide sm:text-6xl">Club suggestions</h1>
+          <AnimeHeading jp="今週のおすすめ">Club suggestions</AnimeHeading>
           <p className="mt-1 text-muted">
             Every week the club leads pick a few titles for everyone to watch or read.
           </p>
@@ -50,7 +51,7 @@ export default async function ClubPage({ searchParams }: { searchParams: SearchP
         {user?.role === "admin" && (
           <Link
             href="/admin"
-            className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-ink hover:brightness-110"
+            className="btn-comic rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-ink"
           >
             Pick this week&apos;s titles
           </Link>

@@ -121,7 +121,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         </p>
         <Link
           href="/sign-in"
-          className="mx-auto mt-2 rounded-full bg-accent px-6 py-3 font-semibold text-accent-ink hover:brightness-110"
+          className="btn-comic mx-auto mt-2 rounded-full bg-accent px-6 py-3 font-semibold text-accent-ink"
         >
           Sign in
         </Link>

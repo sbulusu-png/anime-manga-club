@@ -8,7 +8,7 @@ export default function NotFound() {
       <p className="text-muted">We couldn&apos;t find what you were looking for.</p>
       <Link
         href="/"
-        className="mt-2 rounded-full bg-accent px-6 py-3 font-semibold text-accent-ink"
+        className="btn-comic mt-2 rounded-full bg-accent px-6 py-3 font-semibold text-accent-ink"
       >
         Back home
       </Link>

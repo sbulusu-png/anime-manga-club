@@ -6,6 +6,7 @@ import { MediaCard } from "@/components/media-card";
 import { type SearchParams, param } from "@/lib/search-params";
 import { apiGetAsViewer, requireMember } from "@/lib/server-api";
 import type { Recommendation } from "@/lib/types";
+import { AnimeHeading } from "@/components/anime-heading";
 
 export const metadata: Metadata = { title: "For you", robots: { index: false } };
 
@@ -38,7 +39,7 @@ export default async function ForYouPage({ searchParams }: { searchParams: Searc
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10">
       <header className="flex flex-col gap-2">
-        <h1 className="font-display text-5xl tracking-wide sm:text-6xl">For you</h1>
+        <AnimeHeading jp="あなたへ">For you</AnimeHeading>
         <p className="text-muted">
           {data && signals > 0 ? (
             <>
@@ -86,7 +87,7 @@ export default async function ForYouPage({ searchParams }: { searchParams: Searc
           action={
             <Link
               href="/browse"
-              className="rounded-full bg-accent px-5 py-2 font-semibold text-accent-ink"
+              className="btn-comic rounded-full bg-accent px-5 py-2 font-semibold text-accent-ink"
             >
               Browse the catalog
             </Link>

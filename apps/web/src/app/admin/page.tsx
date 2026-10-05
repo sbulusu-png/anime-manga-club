@@ -7,6 +7,7 @@ import { type SearchParams, param } from "@/lib/search-params";
 import { apiGetAsViewer, requireAdmin } from "@/lib/server-api";
 import type { CurrentWeek } from "@/lib/types";
 import { addWeeks, isMonday, weekLabel } from "@/lib/week";
+import { AnimeHeading } from "@/components/anime-heading";
 
 export const metadata: Metadata = { title: "Club lead panel", robots: { index: false } };
 
@@ -50,7 +51,9 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
         <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
           Club lead panel
         </p>
-        <h1 className="font-display text-5xl tracking-wide">{weekLabel(shown.weekStart)}</h1>
+        <AnimeHeading jp="クラブリーダー" className="text-5xl">
+          {weekLabel(shown.weekStart)}
+        </AnimeHeading>
         <p className="text-muted">
           <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-bold text-ink">
             {relation}

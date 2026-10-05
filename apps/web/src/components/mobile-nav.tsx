@@ -117,7 +117,7 @@ export function MobileNav({
             ) : (
               <Link
                 href="/sign-in"
-                className="block rounded-xl bg-accent px-4 py-3 text-center font-semibold text-accent-ink"
+                className="btn-comic block rounded-xl bg-accent px-4 py-3 text-center font-semibold text-accent-ink"
               >
                 Sign in
               </Link>

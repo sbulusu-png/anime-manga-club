@@ -20,7 +20,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
       >
         <Link
           href="/forgot-password"
-          className="block rounded-full bg-accent px-6 py-3 text-center font-semibold text-accent-ink hover:brightness-110"
+          className="btn-comic block rounded-full bg-accent px-6 py-3 text-center font-semibold text-accent-ink"
         >
           Send a new link
         </Link>

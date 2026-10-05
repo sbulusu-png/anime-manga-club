@@ -87,7 +87,7 @@ export function ReviewCard({
   );
 
   return (
-    <article className="flex h-full flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-card">
+    <article className="manga-panel speech-bubble flex h-[calc(100%-14px)] flex-col gap-3 rounded-2xl bg-surface p-5">
       <header className="flex items-center gap-3">
         {showTitle ? (
           <>

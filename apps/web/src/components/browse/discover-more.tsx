@@ -83,7 +83,7 @@ export function DiscoverMore({
         type="button"
         onClick={() => void discover()}
         disabled={state.status === "loading"}
-        className="rounded-full bg-accent px-6 py-2.5 font-semibold text-accent-ink hover:brightness-110 disabled:cursor-wait disabled:opacity-70"
+        className="btn-comic rounded-full bg-accent px-6 py-2.5 font-semibold text-accent-ink disabled:cursor-wait disabled:opacity-70"
       >
         {state.status === "loading" ? "Searching AniList…" : `Search AniList for “${q}”`}
       </button>

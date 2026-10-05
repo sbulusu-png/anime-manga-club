@@ -2,12 +2,10 @@
 
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
-gsap.registerPlugin(useGSAP, ScrollTrigger);
+gsap.registerPlugin(useGSAP);
 
 const CDN = "https://s4.anilist.co/file/anilistcdn/character/large";
 
@@ -45,12 +43,15 @@ const RIGHT = [
 ];
 
 function Rail({ side, images }: { side: "left" | "right"; images: string[] }) {
+  // Drawn twice, so the track can loop forever: when it has moved by one full set, the
+  // second set sits exactly where the first began.
+  const panels = [...images, ...images];
   return (
     <div className={`character-rail character-rail--${side}`}>
       <div className="character-rail__track">
-        {images.map((src, i) => (
+        {panels.map((src, i) => (
           <div
-            key={src}
+            key={`${src}-${String(i)}`}
             className="character-rail__panel"
             style={{ rotate: `${String((i % 2 === 0 ? -1 : 1) * (side === "left" ? 3 : -3))}deg` }}
           >
@@ -62,14 +63,19 @@ function Rail({ side, images }: { side: "left" | "right"; images: string[] }) {
   );
 }
 
+/** How far the characters drift for each pixel scrolled. */
+const DRIFT = 0.4;
+
 /**
  * Popular characters in the page margins, behind everything (see .character-rail in
- * globals.css). Wide screens only; the tracks drift up together as the page scrolls,
- * unless the visitor prefers reduced motion.
+ * globals.css). Wide screens only. They drift up at a steady fraction of the scroll, on
+ * an endless loop, so a page growing (Browse loading more) or changing never pulls them
+ * backward; motion stops for reduced motion.
  */
 export function CharacterRails() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const pathname = usePathname();
+  // Where the drift has got to, carried across pages.
+  const offsetRef = useRef({ base: 0, lastScroll: 0 });
 
   useGSAP(
     () => {
@@ -77,40 +83,39 @@ export function CharacterRails() {
       gsap
         .matchMedia()
         .add("(min-width: 1280px) and (prefers-reduced-motion: no-preference)", () => {
-          // How far a track can move: its height beyond the viewport.
-          const travel = (track: Element) => Math.max(0, track.scrollHeight - window.innerHeight);
-          // Both rails drift up together at the same pace, over the whole page. (Moving
-          // one against the scroll made that side look much faster than the other.)
-          gsap.utils.toArray<HTMLElement>(".character-rail__track").forEach((track) => {
-            gsap.to(track, {
-              y: () => -travel(track),
-              ease: "none",
-              scrollTrigger: { start: 0, end: "max", scrub: 1.2, invalidateOnRefresh: true },
+          const movers = gsap.utils.toArray<HTMLElement>(".character-rail__track").map((track) => {
+            // One set of characters (the track holds two); wrapping within it is seamless.
+            const loop = () => track.scrollHeight / 2;
+            const wrap = (y: number) => gsap.utils.wrap(-loop(), 0, y);
+            // quickTo reuses one tween for a value that changes on every scroll event.
+            return gsap.quickTo(track, "y", {
+              duration: 0.8,
+              ease: "power3",
+              modifiers: { y: (y: string) => `${String(wrap(parseFloat(y)))}px` },
             });
           });
+          const update = () => {
+            const o = offsetRef.current;
+            // A jump of over a screen in one go isn't someone scrolling: it's a new
+            // page starting at the top (Next.js moves the scroll before the URL changes),
+            // Home/End or a link to an anchor. Fold it into the base, so the characters
+            // stay where they are instead of rewinding or racing ahead.
+            if (Math.abs(window.scrollY - o.lastScroll) > window.innerHeight) {
+              o.base += (o.lastScroll - window.scrollY) * DRIFT;
+            }
+            o.lastScroll = window.scrollY;
+            const y = -(o.base + window.scrollY * DRIFT);
+            for (const move of movers) move(y);
+          };
+          update();
+          window.addEventListener("scroll", update, { passive: true });
+          return () => {
+            window.removeEventListener("scroll", update);
+          };
         });
     },
     { scope: rootRef },
   );
-
-  // Each page has its own height, so the scroll range changes on navigation, and again
-  // whenever a page grows (Browse loading more results): re-measure, so the rails keep
-  // drifting all the way to the bottom.
-  useEffect(() => {
-    ScrollTrigger.refresh();
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const observer = new ResizeObserver(() => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        ScrollTrigger.refresh();
-      }, 200);
-    });
-    observer.observe(document.body);
-    return () => {
-      observer.disconnect();
-      clearTimeout(timer);
-    };
-  }, [pathname]);
 
   return (
     <div ref={rootRef} className="character-rails">

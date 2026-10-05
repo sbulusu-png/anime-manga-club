@@ -320,7 +320,7 @@ export function DeleteAccount({
         <button
           type="submit"
           disabled={pending || !confirmed || (hasPassword && !password)}
-          className="rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-ink disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-comic rounded-full bg-accent px-5 py-2.5 font-semibold text-accent-ink disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? "Deleting…" : "Delete my account forever"}
         </button>

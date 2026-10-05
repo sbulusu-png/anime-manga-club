@@ -18,9 +18,7 @@ export function SuggestionCard({
 }) {
   const by = suggestion.suggestedBy;
   return (
-    <div
-      className={`flex gap-4 rounded-2xl border border-border bg-surface p-4 shadow-card ${className}`}
-    >
+    <div className={`manga-panel flex gap-4 rounded-2xl bg-surface p-4 ${className}`}>
       <div className="w-24 shrink-0">
         <MediaCard media={suggestion.media} />
       </div>

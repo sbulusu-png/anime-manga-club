@@ -54,7 +54,7 @@ export function MediaCard({
       className="group flex flex-col gap-2 rounded-2xl outline-offset-4"
     >
       <div
-        className="relative aspect-[2/3] overflow-hidden rounded-2xl border border-border shadow-card"
+        className="manga-panel relative aspect-[2/3] overflow-hidden rounded-xl"
         style={{ backgroundColor: media.coverColor ?? "var(--surface-2)" }}
       >
         {media.coverImageUrl && (
@@ -67,8 +67,18 @@ export function MediaCard({
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         )}
+        <span aria-hidden="true" className="panel-speedlines" />
+        {media.anilistScore !== null && (
+          // The score as a starburst sticker (the text below says it for screen readers).
+          <span
+            aria-hidden="true"
+            className="burst absolute bottom-1 right-1 grid size-12 place-items-center bg-accent text-[0.7rem] font-extrabold text-accent-ink"
+          >
+            {media.anilistScore}%
+          </span>
+        )}
         {media.club.verdict && (
-          <span className="absolute left-2 top-2 shadow-card">
+          <span className="absolute left-2 top-2 -rotate-3 shadow-card">
             <span className="sr-only">Club verdict: </span>
             <VerdictBadge rating={media.club.verdict} size="sm" />
           </span>
@@ -81,10 +91,7 @@ export function MediaCard({
         <p className="flex items-center gap-2 text-xs text-muted">
           <span>{mediaMeta(media)}</span>
           {media.anilistScore !== null && (
-            <span>
-              <span aria-hidden="true">★</span>
-              <span className="sr-only">AniList score</span> {media.anilistScore}%
-            </span>
+            <span className="sr-only">AniList score {media.anilistScore}%</span>
           )}
         </p>
       </div>

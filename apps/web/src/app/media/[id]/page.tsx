@@ -14,6 +14,7 @@ import { ReviewCard } from "@/components/review-card";
 import { SEASONS, STATUSES } from "@/lib/browse";
 import { TAGS, apiGet, apiGetAsViewer, getCurrentUser, viewerOf } from "@/lib/server-api";
 import type { ListEntry, MediaDetail, Page, Recommendation, Review } from "@/lib/types";
+import { AnimeHeading } from "@/components/anime-heading";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -113,7 +114,7 @@ export default async function MediaPage({ params }: Props) {
       <div className="mx-auto -mt-20 grid max-w-6xl gap-x-8 gap-y-6 px-4 sm:-mt-28 md:grid-cols-[14rem_1fr]">
         <div className="relative md:col-start-1 md:row-start-1">
           <div
-            className="relative mx-auto aspect-[2/3] w-44 overflow-hidden rounded-2xl border border-border shadow-card md:w-full"
+            className="manga-panel relative mx-auto aspect-[2/3] w-44 overflow-hidden rounded-2xl md:w-full"
             style={{ backgroundColor: media.coverColor ?? "var(--surface-2)" }}
           >
             {media.coverImageUrl && (
@@ -134,9 +135,12 @@ export default async function MediaPage({ params }: Props) {
             <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
               {{ anime: "Anime", manga: "Manga", manhwa: "Manhwa", manhua: "Manhua" }[media.kind]}
             </p>
-            <h1 className="font-display text-4xl leading-none tracking-wide sm:text-6xl">
+            <AnimeHeading
+              jp={media.title.native ?? media.title.romaji}
+              className="text-4xl leading-none sm:text-6xl"
+            >
               {media.title.display}
-            </h1>
+            </AnimeHeading>
             {(media.title.romaji !== media.title.display || media.title.native) && (
               <p className="text-muted">
                 {[
@@ -279,7 +283,7 @@ export default async function MediaPage({ params }: Props) {
         </div>
       </div>
 
-      <HomeSection id="club-reviews" title="Club reviews">
+      <HomeSection id="club-reviews" title="Club reviews" jp="クラブの声">
         {!reviews ? (
           <EmptyState>
             We couldn&apos;t load reviews right now. Please try again in a moment.
@@ -298,7 +302,7 @@ export default async function MediaPage({ params }: Props) {
       </HomeSection>
 
       {similar && similar.items.length > 0 && (
-        <HomeSection id="similar" title="If you like this">
+        <HomeSection id="similar" title="If you like this" jp="おすすめ">
           <ul className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-6">
             {similar.items.map(({ media: item, reasons }) => (
               <li key={item.id} className="flex flex-col gap-1.5">

@@ -9,6 +9,7 @@ import { PAGE_SIZE, hasFilters, mediaApiPath, parseFilters, toSearchParams } fro
 import type { SearchParams } from "@/lib/search-params";
 import { TAGS, apiGet } from "@/lib/server-api";
 import type { MediaSummary, Page } from "@/lib/types";
+import { AnimeHeading } from "@/components/anime-heading";
 
 export const metadata: Metadata = {
   title: "Browse anime and manga",
@@ -29,7 +30,7 @@ export default async function BrowsePage({ searchParams }: { searchParams: Searc
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10">
       <header>
-        <h1 className="font-display text-5xl tracking-wide sm:text-6xl">Browse</h1>
+        <AnimeHeading jp="ブラウズ">Browse</AnimeHeading>
         <p className="mt-1 text-muted">
           Every anime, manga, manhwa and manhua in the club&apos;s catalog. Filters stay in the
           address, so you can share a search.

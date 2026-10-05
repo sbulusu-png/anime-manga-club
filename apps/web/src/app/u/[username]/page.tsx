@@ -11,6 +11,7 @@ import { statusLabel } from "@/lib/list";
 import { type SearchParams, param } from "@/lib/search-params";
 import { TAGS, apiGet, apiGetAsViewer, getCurrentUser, viewerOf } from "@/lib/server-api";
 import type { ListEntry, ListStatus, Page, Profile, Review } from "@/lib/types";
+import { AnimeHeading } from "@/components/anime-heading";
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -64,7 +65,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       <header className="flex flex-wrap items-center gap-5">
         <Avatar name={name} image={user.image} size={88} />
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="font-display text-4xl tracking-wide sm:text-5xl">{name}</h1>
+          <AnimeHeading jp="プロフィール" className="text-4xl sm:text-5xl">
+            {name}
+          </AnimeHeading>
           <p className="text-muted">
             @{user.username} · Joined {JOINED.format(new Date(user.joinedAt))}
             {user.role === "admin" && (

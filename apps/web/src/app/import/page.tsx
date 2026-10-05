@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { ImportListForm } from "@/components/list/import-list-form";
 import { requireMember } from "@/lib/server-api";
+import { AnimeHeading } from "@/components/anime-heading";
 
 export const metadata: Metadata = { title: "Import your list", robots: { index: false } };
 
@@ -11,7 +12,9 @@ export default async function ImportPage() {
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-10">
       <header className="flex flex-col gap-2">
-        <h1 className="font-display text-5xl tracking-wide">Import your list</h1>
+        <AnimeHeading jp="インポート" className="text-5xl">
+          Import your list
+        </AnimeHeading>
         <p className="text-muted">
           Bring over your anime and manga from AniList. Each title keeps its status (watching,
           completed, paused or dropped) and your score, and your suggestions learn from them
@@ -19,7 +22,7 @@ export default async function ImportPage() {
         </p>
       </header>
 
-      <section className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+      <section className="manga-panel rounded-2xl bg-surface p-5">
         <ImportListForm username={user.username ?? ""} />
       </section>
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AnimeHeading } from "@/components/anime-heading";
 
 export const metadata: Metadata = { title: "Credits" };
 
@@ -206,7 +207,9 @@ const LIBRARIES: { name: string; license: string; url: string }[] = [
 export default function CreditsPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-16">
-      <h1 className="font-display text-5xl tracking-wide">Credits</h1>
+      <AnimeHeading jp="クレジット" className="text-5xl">
+        Credits
+      </AnimeHeading>
       <p className="mt-3 text-muted">
         This fan project for our club builds on the generous work of these creators. Anime and manga
         titles, characters and artwork belong to their respective owners.

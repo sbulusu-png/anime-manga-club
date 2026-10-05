@@ -125,7 +125,7 @@ export function SubmitButton({
       type="submit"
       disabled={pending}
       aria-disabled={pending}
-      className="w-full rounded-full bg-accent px-6 py-3 font-semibold text-accent-ink hover:brightness-110 disabled:cursor-wait disabled:opacity-70"
+      className="btn-comic w-full rounded-full bg-accent px-6 py-3 font-semibold text-accent-ink disabled:cursor-wait disabled:opacity-70"
     >
       {pending ? pendingLabel : children}
     </button>

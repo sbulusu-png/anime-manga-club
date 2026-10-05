@@ -9,6 +9,7 @@ import {
   UsernameSettings,
 } from "@/components/settings/settings-forms";
 import { apiGetAsViewer, requireMember } from "@/lib/server-api";
+import { AnimeHeading } from "@/components/anime-heading";
 
 export const metadata: Metadata = { title: "Account settings", robots: { index: false } };
 
@@ -26,7 +27,9 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-10">
       <header className="flex flex-col gap-1">
-        <h1 className="font-display text-5xl tracking-wide">Settings</h1>
+        <AnimeHeading jp="設定" className="text-5xl">
+          Settings
+        </AnimeHeading>
         <p className="text-muted">
           Signed in as <strong className="text-ink">{user.email}</strong>
           {providers.has("google") && " with Google"}.{" "}

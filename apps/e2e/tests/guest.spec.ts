@@ -55,6 +55,28 @@ test.describe("visitors", () => {
     await expect(page.getByRole("link", { name: "Sign in to add to your list" })).toBeVisible();
   });
 
+  test("moving between pages from the home page raises no errors", async ({ page }) => {
+    // Leaving the home page tears down its scroll animations; that once crashed with
+    // "Maximum call stack size exceeded" until a reload.
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    for (const [link, heading] of [
+      ["Browse", "Browse"],
+      ["Reviews", "Reviews"],
+      ["Club suggestions", "Club suggestions"],
+    ] as const) {
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
+      await page
+        .getByRole("navigation", { name: "Main" })
+        .getByRole("link", { name: link })
+        .first()
+        .click();
+      await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+    }
+    expect(errors).toEqual([]);
+  });
+
   test("opening a title from far down a page starts at its top", async ({ page }) => {
     await page.goto("/browse");
     const card = page.locator('main a[href^="/media/"]').first();
