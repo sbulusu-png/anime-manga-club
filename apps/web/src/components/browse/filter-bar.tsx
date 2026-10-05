@@ -150,7 +150,9 @@ export function FilterBar({ filters, genres }: { filters: Filters; genres: strin
       </form>
 
       <div className="flex flex-wrap items-center gap-3">
-        <fieldset className="flex rounded-full border border-border bg-surface p-1">
+        {/* Five types: on phones they share the full width in equal slots, so the row
+            never pushes the page sideways. */}
+        <fieldset className="grid w-full grid-cols-5 rounded-full border border-border bg-surface p-1 sm:flex sm:w-auto">
           <legend className="sr-only">Type</legend>
           {TYPES.map((type) => {
             const active = filters.type === type.value;
@@ -167,7 +169,7 @@ export function FilterBar({ filters, genres }: { filters: Filters; genres: strin
                     season: type.value && type.value !== "anime" ? null : filters.season,
                   });
                 }}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
+                className={`rounded-full px-1 py-1.5 text-xs font-semibold min-[360px]:text-sm sm:px-4 ${
                   active ? "bg-accent text-accent-ink" : "text-muted hover:text-ink"
                 }`}
               >

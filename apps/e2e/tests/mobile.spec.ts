@@ -15,11 +15,16 @@ test("the phone menu opens, offers sign-in, and closes with Escape", async ({ pa
 });
 
 test("pages fit a phone screen without sideways scrolling", async ({ page }) => {
-  for (const path of ["/", "/browse", "/reviews", "/club", "/sign-up"]) {
-    await page.goto(path);
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow, `${path} scrolls sideways`).toBeLessThanOrEqual(0);
+  // The project's phone, then the narrowest common one (where Browse's five type
+  // buttons are tightest).
+  for (const width of [page.viewportSize()?.width ?? 412, 320]) {
+    await page.setViewportSize({ width, height: 800 });
+    for (const path of ["/", "/browse", "/reviews", "/club", "/sign-up"]) {
+      await page.goto(path);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, `${path} scrolls sideways at ${String(width)}px`).toBeLessThanOrEqual(0);
+    }
   }
 });
