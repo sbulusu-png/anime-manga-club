@@ -13,19 +13,6 @@ interface Credit {
 
 const SECTIONS: { heading: string; credits: Credit[] }[] = [
   {
-    heading: "3D models",
-    credits: [
-      {
-        name: "Anya Forger (SPY x FAMILY)",
-        url: "https://skfb.ly/o9NEW",
-        by: "tonyhoni",
-        license: "Creative Commons Attribution 4.0",
-        licenseUrl: "http://creativecommons.org/licenses/by/4.0/",
-        note: "Compressed for the web with gltf-transform (meshopt geometry, WebP textures).",
-      },
-    ],
-  },
-  {
     heading: "Images and data",
     credits: [
       {
@@ -58,9 +45,124 @@ const SECTIONS: { heading: string; credits: Credit[] }[] = [
         license: "© Gosho Aoyama / Shogakukan",
       },
       {
-        name: "Anya Forger (SPY x FAMILY)",
-        by: "Tatsuya Endo",
-        license: "© Tatsuya Endo / Shueisha",
+        name: "Satoru Gojo (Jujutsu Kaisen)",
+        by: "Gege Akutami",
+        license: "© Gege Akutami / Shueisha",
+      },
+      {
+        name: "Mikasa Ackerman (Attack on Titan)",
+        by: "Hajime Isayama",
+        license: "© Hajime Isayama / Kodansha",
+      },
+      {
+        name: "Lelouch Lamperouge (Code Geass)",
+        by: "Sunrise",
+        license: "© Sunrise / Project Geass",
+      },
+      {
+        name: "Frieren (Frieren: Beyond Journey’s End)",
+        by: "Kanehito Yamada and Tsukasa Abe",
+        license: "© Kanehito Yamada, Tsukasa Abe / Shogakukan",
+      },
+      {
+        name: "Itachi Uchiha and Naruto Uzumaki (Naruto)",
+        by: "Masashi Kishimoto",
+        license: "© Masashi Kishimoto / Shueisha",
+      },
+      {
+        name: "Tanjiro Kamado (Demon Slayer)",
+        by: "Koyoharu Gotouge",
+        license: "© Koyoharu Gotouge / Shueisha",
+      },
+      {
+        name: "Killua Zoldyck (Hunter x Hunter)",
+        by: "Yoshihiro Togashi",
+        license: "© Yoshihiro Togashi / Shueisha",
+      },
+      {
+        name: "Makima (Chainsaw Man)",
+        by: "Tatsuki Fujimoto",
+        license: "© Tatsuki Fujimoto / Shueisha",
+      },
+      {
+        name: "Roronoa Zoro (One Piece)",
+        by: "Eiichiro Oda",
+        license: "© Eiichiro Oda / Shueisha",
+      },
+      {
+        name: "Maomao (The Apothecary Diaries)",
+        by: "Natsu Hyūga",
+        license: "© Natsu Hyūga / Shufunotomo",
+      },
+      {
+        name: "L Lawliet (Death Note)",
+        by: "Tsugumi Ohba and Takeshi Obata",
+        license: "© Tsugumi Ohba, Takeshi Obata / Shueisha",
+      },
+      {
+        name: "Eren Yeager (Attack on Titan)",
+        by: "Hajime Isayama",
+        license: "© Hajime Isayama / Kodansha",
+      },
+      {
+        name: "Kurisu Makise (Steins;Gate)",
+        by: "5pb. and Nitroplus",
+        license: "© MAGES. / 5pb. / Nitroplus",
+      },
+      {
+        name: "Yuji Itadori (Jujutsu Kaisen)",
+        by: "Gege Akutami",
+        license: "© Gege Akutami / Shueisha",
+      },
+      {
+        name: "Kakashi Hatake (Naruto)",
+        by: "Masashi Kishimoto",
+        license: "© Masashi Kishimoto / Shueisha",
+      },
+      {
+        name: "Violet Evergarden (Violet Evergarden)",
+        by: "Kana Akatsuki",
+        license: "© Kana Akatsuki / Kyoto Animation",
+      },
+      {
+        name: "Shigeo Kageyama (Mob Psycho 100)",
+        by: "ONE",
+        license: "© ONE / Shogakukan",
+      },
+      {
+        name: "Megumin (KonoSuba)",
+        by: "Natsume Akatsuki",
+        license: "© Natsume Akatsuki / Kadokawa",
+      },
+      {
+        name: "Ken Kaneki (Tokyo Ghoul)",
+        by: "Sui Ishida",
+        license: "© Sui Ishida / Shueisha",
+      },
+      {
+        name: "Thorfinn (Vinland Saga)",
+        by: "Makoto Yukimura",
+        license: "© Makoto Yukimura / Kodansha",
+      },
+      {
+        name: "Denji and Power (Chainsaw Man)",
+        by: "Tatsuki Fujimoto",
+        license: "© Tatsuki Fujimoto / Shueisha",
+      },
+      {
+        name: "Light Yagami (Death Note)",
+        by: "Tsugumi Ohba and Takeshi Obata",
+        license: "© Tsugumi Ohba, Takeshi Obata / Shueisha",
+      },
+      {
+        name: "Shoto Todoroki (My Hero Academia)",
+        by: "Kohei Horikoshi",
+        license: "© Kohei Horikoshi / Shueisha",
+      },
+      {
+        name: "Kurapika (Hunter x Hunter)",
+        by: "Yoshihiro Togashi",
+        license: "© Yoshihiro Togashi / Shueisha",
       },
     ],
   },
@@ -92,7 +194,6 @@ const LIBRARIES: { name: string; license: string; url: string }[] = [
   { name: "React", license: "MIT", url: "https://react.dev" },
   { name: "Tailwind CSS", license: "MIT", url: "https://tailwindcss.com" },
   { name: "GSAP", license: "GSAP Standard License", url: "https://gsap.com" },
-  { name: "three.js", license: "MIT", url: "https://threejs.org" },
   { name: "Hono", license: "MIT", url: "https://hono.dev" },
   { name: "Better Auth", license: "MIT", url: "https://www.better-auth.com" },
   { name: "Drizzle ORM", license: "Apache 2.0", url: "https://orm.drizzle.team" },

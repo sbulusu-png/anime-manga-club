@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { media } from "../db/schema/index.js";
 import { AppError } from "./errors.js";
+import { searchKeyOf } from "./title-key.js";
 
 const ANILIST_URL = "https://graphql.anilist.co";
 
@@ -9,9 +10,11 @@ const MEDIA_FIELDS = `
   id
   idMal
   type
+  countryOfOrigin
   format
   status
   title { romaji english native }
+  synonyms
   description(asHtml: false)
   coverImage { extraLarge color }
   bannerImage
@@ -29,9 +32,11 @@ const MEDIA_FIELDS = `
 `;
 
 const POPULAR_QUERY = `
-  query ($page: Int!, $perPage: Int!, $type: MediaType!) {
+  query ($page: Int!, $perPage: Int!, $type: MediaType!, $country: CountryCode) {
     Page(page: $page, perPage: $perPage) {
-      media(type: $type, sort: POPULARITY_DESC, isAdult: false) { ${MEDIA_FIELDS} }
+      media(type: $type, sort: POPULARITY_DESC, isAdult: false, countryOfOrigin: $country) {
+        ${MEDIA_FIELDS}
+      }
     }
   }
 `;
@@ -50,6 +55,14 @@ const BY_ID_QUERY = `
   }
 `;
 
+const BY_IDS_QUERY = `
+  query ($ids: [Int]!, $perPage: Int!) {
+    Page(page: 1, perPage: $perPage) {
+      media(id_in: $ids) { ${MEDIA_FIELDS} }
+    }
+  }
+`;
+
 const CHARACTERS_QUERY = `
   query ($id: Int!, $perPage: Int!) {
     Media(id: $id) {
@@ -63,10 +76,35 @@ const CHARACTERS_QUERY = `
   }
 `;
 
+// A member's own list, a chunk at a time. forceSingleCompletedList folds AniList's
+// per-format "Completed TV/Movie/..." lists into one.
+const LIST_QUERY = `
+  query ($userName: String!, $type: MediaType!, $chunk: Int!, $perChunk: Int!) {
+    MediaListCollection(
+      userName: $userName
+      type: $type
+      chunk: $chunk
+      perChunk: $perChunk
+      forceSingleCompletedList: true
+    ) {
+      hasNextChunk
+      lists {
+        entries {
+          status
+          progress
+          score(format: POINT_100)
+          media { ${MEDIA_FIELDS} }
+        }
+      }
+    }
+  }
+`;
+
 const anilistMediaSchema = z.object({
   id: z.number().int(),
   idMal: z.number().int().nullable(),
   type: z.enum(["ANIME", "MANGA"]),
+  countryOfOrigin: z.string().nullish(),
   format: z.string().nullable(),
   status: z.string().nullable(),
   title: z.object({
@@ -74,6 +112,7 @@ const anilistMediaSchema = z.object({
     english: z.string().nullable(),
     native: z.string().nullable(),
   }),
+  synonyms: z.array(z.string()).nullish(),
   description: z.string().nullable(),
   coverImage: z.object({ extraLarge: z.string().nullable(), color: z.string().nullable() }),
   bannerImage: z.string().nullable(),
@@ -119,6 +158,25 @@ const charactersSchema = z.object({
             }),
           ),
         }),
+      })
+      .nullable(),
+  }),
+});
+
+const listEntrySchema = z.object({
+  status: z.enum(["CURRENT", "PLANNING", "COMPLETED", "DROPPED", "PAUSED", "REPEATING"]),
+  progress: z.number().int().nullable(),
+  score: z.number().nullable(),
+  media: anilistMediaSchema,
+});
+export type AnilistListEntry = z.infer<typeof listEntrySchema>;
+
+const listSchema = z.object({
+  data: z.object({
+    MediaListCollection: z
+      .object({
+        hasNextChunk: z.boolean().nullable(),
+        lists: z.array(z.object({ entries: z.array(listEntrySchema) }).nullable()).nullable(),
       })
       .nullable(),
   }),
@@ -173,7 +231,10 @@ export function createAnilistClient({
     used++;
   }
 
-  async function query(body: { query: string; variables: Record<string, unknown> }) {
+  async function query(
+    body: { query: string; variables: Record<string, unknown> },
+    timeout = timeoutMs,
+  ) {
     for (let attempt = 0; ; attempt++) {
       takeBudget();
       let res: Response;
@@ -182,7 +243,7 @@ export function createAnilistClient({
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify(body),
-          signal: AbortSignal.timeout(timeoutMs),
+          signal: AbortSignal.timeout(timeout),
         });
       } catch (err) {
         throw new AppError(502, "CATALOG_UNAVAILABLE", "Couldn't reach AniList.", { cause: err });
@@ -210,9 +271,13 @@ export function createAnilistClient({
   }
 
   return {
-    /** The most popular non-adult titles of one type. */
-    async popular(type: "ANIME" | "MANGA", page = 1, perPage = 50) {
-      const json = await query({ query: POPULAR_QUERY, variables: { page, perPage, type } });
+    /** The most popular non-adult titles of one type, optionally from one country. */
+    async popular(type: "ANIME" | "MANGA", page = 1, perPage = 50, country?: "JP" | "KR" | "CN") {
+      const json = await query({
+        query: POPULAR_QUERY,
+        // Leave the country out entirely when not filtering: AniList reads null as "none".
+        variables: { page, perPage, type, ...(country && { country }) },
+      });
       return parse(pageSchema, json).data.Page.media;
     },
 
@@ -229,6 +294,34 @@ export function createAnilistClient({
     async byId(id: number) {
       const json = await query({ query: BY_ID_QUERY, variables: { id } });
       return json === null ? null : parse(byIdSchema, json).data.Media;
+    },
+
+    /**
+     * A member's anime or manga list, all chunks, or null when the user doesn't exist or
+     * keeps their list private. Stops after `maxEntries` so one import can't run away.
+     */
+    async userList(userName: string, type: "ANIME" | "MANGA", maxEntries = 2_000) {
+      const entries: AnilistListEntry[] = [];
+      const perChunk = 500;
+      for (let chunk = 1; entries.length < maxEntries; chunk++) {
+        // Lists are big (a synopsis per title), so allow longer than a normal lookup.
+        const json = await query(
+          { query: LIST_QUERY, variables: { userName, type, chunk, perChunk } },
+          25_000,
+        );
+        if (json === null) return chunk === 1 ? null : entries;
+        const collection = parse(listSchema, json).data.MediaListCollection;
+        if (!collection) return chunk === 1 ? null : entries;
+        for (const list of collection.lists ?? []) entries.push(...(list?.entries ?? []));
+        if (!collection.hasNextChunk) break;
+      }
+      return entries.slice(0, maxEntries);
+    },
+
+    /** Up to 50 titles by AniList id, in one request (for refreshing the catalog). */
+    async byIds(ids: number[]) {
+      const json = await query({ query: BY_IDS_QUERY, variables: { ids, perPage: 50 } });
+      return json === null ? [] : parse(pageSchema, json).data.Page.media;
     },
 
     /** Main characters first, then supporting. */
@@ -284,10 +377,13 @@ export function toMediaRow(item: AnilistMedia): typeof media.$inferInsert {
     malId: item.idMal,
     type: item.type === "ANIME" ? "anime" : "manga",
     format: item.format,
+    country: item.countryOfOrigin ?? null,
     status: item.status,
     titleRomaji: item.title.romaji,
     titleEnglish: item.title.english,
     titleNative: item.title.native,
+    synonyms: item.synonyms ?? [],
+    searchKey: searchKeyOf({ ...item.title, synonyms: item.synonyms ?? [] }),
     synopsis: cleanDescription(item.description),
     coverImageUrl: item.coverImage.extraLarge,
     coverColor: item.coverImage.color,

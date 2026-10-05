@@ -1,4 +1,4 @@
-import type { AnilistMedia } from "../src/lib/anilist.js";
+import type { AnilistListEntry, AnilistMedia } from "../src/lib/anilist.js";
 
 /** Builds an AniList media record; override only what a test cares about. */
 export function anilistMedia(id: number, overrides: Partial<AnilistMedia> = {}): AnilistMedia {
@@ -34,13 +34,15 @@ interface FakeOptions {
   failWith?: number;
   /** Simulates the network being down. */
   offline?: boolean;
+  /** Members' lists by AniList username (missing = no such user, or private). */
+  lists?: Record<string, AnilistListEntry[]>;
 }
 
 /**
  * A stand-in for graphql.anilist.co that answers our real queries from fixtures,
  * so tests exercise request building and response parsing without the network.
  */
-export function fakeAnilist({ catalog = [], failWith, offline }: FakeOptions = {}) {
+export function fakeAnilist({ catalog = [], failWith, offline, lists = {} }: FakeOptions = {}) {
   const calls: { kind: string; variables: Record<string, unknown> }[] = [];
   const state = { catalog: [...catalog], failWith, offline };
 
@@ -56,13 +58,15 @@ export function fakeAnilist({ catalog = [], failWith, offline }: FakeOptions = {
       query: string;
       variables: Record<string, unknown>;
     };
-    const kind = query.includes("characters(")
-      ? "characters"
-      : query.includes("search:")
-        ? "search"
-        : query.includes("Media(id:")
-          ? "byId"
-          : "popular";
+    const kind = query.includes("MediaListCollection")
+      ? "list"
+      : query.includes("characters(")
+        ? "characters"
+        : query.includes("search:")
+          ? "search"
+          : query.includes("Media(id:")
+            ? "byId"
+            : "popular";
     calls.push({ kind, variables });
 
     if (state.offline) return Promise.reject(new TypeError("fetch failed"));
@@ -74,6 +78,30 @@ export function fakeAnilist({ catalog = [], failWith, offline }: FakeOptions = {
 
     const find = (id: unknown) => state.catalog.find((m) => m.id === id);
     switch (kind) {
+      case "list": {
+        const entries = lists[String(variables.userName)];
+        if (!entries) {
+          return Promise.resolve(
+            json(
+              { data: { MediaListCollection: null }, errors: [{ message: "Private User" }] },
+              404,
+            ),
+          );
+        }
+        const ofType = entries.filter((e) => e.media.type === variables.type);
+        const perChunk = Number(variables.perChunk);
+        const start = (Number(variables.chunk) - 1) * perChunk;
+        return Promise.resolve(
+          json({
+            data: {
+              MediaListCollection: {
+                hasNextChunk: start + perChunk < ofType.length,
+                lists: [{ entries: ofType.slice(start, start + perChunk) }],
+              },
+            },
+          }),
+        );
+      }
       case "search": {
         const term = String(variables.search).toLowerCase();
         const type = variables.type as string | undefined;

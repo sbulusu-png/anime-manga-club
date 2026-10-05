@@ -2,9 +2,10 @@ import { type SQL, and, desc, eq, sql } from "drizzle-orm";
 
 import type { Db } from "../db/client.js";
 import { listEntries, listStatus, media, users } from "../db/schema/index.js";
+import { type AnilistClient, type AnilistListEntry, toMediaRow } from "../lib/anilist.js";
 import { decodeCursor, encodeCursor } from "../lib/cursor.js";
 import { AppError } from "../lib/errors.js";
-import { type MediaRow, toMediaSummary } from "./media.js";
+import { type MediaRow, toMediaSummary, upsertMedia } from "./media.js";
 
 export const LIST_STATUSES = listStatus.enumValues;
 export type ListStatus = (typeof LIST_STATUSES)[number];
@@ -20,6 +21,7 @@ export function toListEntryJson(entry: EntryRow, title: MediaRow) {
   return {
     status: entry.status,
     progress: entry.progress,
+    // entry.score (from an imported list) stays private: it only shapes suggestions.
     total: totalOf(title),
     createdAt: entry.createdAt,
     updatedAt: entry.updatedAt,
@@ -149,4 +151,90 @@ export async function removeEntry(db: Db, userId: string, mediaId: number) {
   if (removed.length === 0) {
     throw new AppError(404, "NOT_ON_LIST", "That title isn't on your list.");
   }
+}
+
+/** AniList statuses we keep; "Planning" has no equivalent here, so it's skipped. */
+const FROM_ANILIST: Partial<Record<AnilistListEntry["status"], ListStatus>> = {
+  CURRENT: "current",
+  REPEATING: "current",
+  COMPLETED: "completed",
+  PAUSED: "paused",
+  DROPPED: "dropped",
+};
+
+export interface ImportSummary {
+  imported: { anime: number; manga: number };
+  skipped: { planning: number; adult: number };
+}
+
+/**
+ * Copies a member's AniList anime and manga lists onto their list here: titles join the
+ * catalog, and each entry keeps its status, progress and score (the score shapes their
+ * suggestions). Re-importing updates entries; nothing already on their list is removed.
+ */
+export async function importFromAnilist(
+  db: Db,
+  anilist: AnilistClient,
+  userId: string,
+  anilistUsername: string,
+): Promise<ImportSummary> {
+  const [anime, manga] = [
+    await anilist.userList(anilistUsername, "ANIME"),
+    await anilist.userList(anilistUsername, "MANGA"),
+  ];
+  if (anime === null && manga === null) {
+    throw new AppError(
+      404,
+      "ANILIST_USER_NOT_FOUND",
+      "We couldn't find that AniList user, or their list is private.",
+    );
+  }
+
+  const summary: ImportSummary = {
+    imported: { anime: 0, manga: 0 },
+    skipped: { planning: 0, adult: 0 },
+  };
+  // A title can sit in more than one of a member's custom lists; keep the first.
+  const keep = new Map<number, { entry: AnilistListEntry; status: ListStatus }>();
+  for (const entry of [...(anime ?? []), ...(manga ?? [])]) {
+    const status = FROM_ANILIST[entry.status];
+    if (!status) summary.skipped.planning++;
+    else if (entry.media.isAdult) summary.skipped.adult++;
+    else if (!keep.has(entry.media.id)) keep.set(entry.media.id, { entry, status });
+  }
+  if (keep.size === 0) return summary;
+
+  // Titles first (in batches, well under Postgres's parameter limit), then the entries.
+  const kept = [...keep.values()];
+  const idByAnilistId = new Map<number, number>();
+  for (let i = 0; i < kept.length; i += 400) {
+    const rows = await upsertMedia(
+      db,
+      kept.slice(i, i + 400).map(({ entry }) => toMediaRow(entry.media)),
+    );
+    for (const row of rows) idByAnilistId.set(row.anilistId, row.id);
+  }
+
+  const values = kept.flatMap(({ entry, status }) => {
+    const mediaId = idByAnilistId.get(entry.media.id);
+    if (mediaId === undefined) return [];
+    const score = entry.score && entry.score > 0 ? Math.min(100, Math.round(entry.score)) : null;
+    summary.imported[entry.media.type === "ANIME" ? "anime" : "manga"]++;
+    return [{ userId, mediaId, status, progress: Math.max(0, entry.progress ?? 0), score }];
+  });
+  for (let i = 0; i < values.length; i += 1_000) {
+    await db
+      .insert(listEntries)
+      .values(values.slice(i, i + 1_000))
+      .onConflictDoUpdate({
+        target: [listEntries.userId, listEntries.mediaId],
+        set: {
+          status: sql`excluded.status`,
+          progress: sql`excluded.progress`,
+          score: sql`excluded.score`,
+          updatedAt: sql`now()`,
+        },
+      });
+  }
+  return summary;
 }

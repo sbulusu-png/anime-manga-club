@@ -2,7 +2,7 @@
 //
 // "For you" blends three signals:
 //   1. Taste profile: genre, theme (tag) and format affinities learned from the member's
-//      verdicts and list.
+//      verdicts and list (statuses, and scores from an imported AniList list).
 //   2. Collaborative: titles loved by members who love the same things.
 //   3. Quality: AniList score, the club's own verdict, and a little popularity.
 // "Similar titles" blends co-liking ("members who loved X also loved Y") with
@@ -26,13 +26,16 @@ import { listEntries, media, reviews } from "../db/schema/index.js";
 import { AppError } from "../lib/errors.js";
 import { RATING_LABELS, type Rating, ratingToValue, valueToRating } from "../lib/rating.js";
 import type { ListStatus } from "./list.js";
-import { type MediaRow, getMedia, toMediaSummary } from "./media.js";
+import { CARD_COLUMNS, type CardRow, getMedia, toMediaSummary } from "./media.js";
 
 /**
- * "Go for it" or "Perfection" counts as loved; so does a completed title the member
- * didn't review. (Reviews store verdicts as 1-4; see lib/rating.ts.)
+ * "Go for it" or "Perfection" counts as loved; so does a title the member scored
+ * LOVED_LIST_SCORE or more on an imported list, or completed without a score or review.
+ * (Reviews store verdicts as 1-4; see lib/rating.ts.)
  */
 export const LOVED_SCORE = ratingToValue("go_for_it");
+/** An imported 0-100 list score this high counts as loved. */
+const LOVED_LIST_SCORE = 75;
 /** Cast and audience tags are true of half the catalog, so they make dull reasons. */
 const GENERIC_TAG =
   /Protagonist$|^Primarily .+ Cast$|^(Ensemble Cast|Shounen|Shoujo|Seinen|Josei)$/;
@@ -46,7 +49,7 @@ const LOVED = sql`loved as (
   from ${reviews} where ${reviews.score} >= ${LOVED_SCORE}
   union
   select l.user_id, l.media_id from ${listEntries} l
-  where l.status = 'completed'
+  where (l.score >= ${LOVED_LIST_SCORE} or (l.score is null and l.status = 'completed'))
     and not exists (
       select 1 from ${reviews} r where r.user_id = l.user_id and r.media_id = l.media_id
     )
@@ -60,9 +63,18 @@ const VERDICT_WEIGHTS: Record<Rating, number> = {
   perfection: 1,
 };
 
-/** How much each kind of interaction says about taste, from -1 (disliked) to 1 (loved). */
-export function signalWeight(score: number | null, status: ListStatus | null): number {
+/**
+ * How much each kind of interaction says about taste, from -1 (disliked) to 1 (loved).
+ * A verdict says the most; then the member's own 0-100 score from an imported list
+ * (80+ is liking it, under 60 is not); then the list status alone.
+ */
+export function signalWeight(
+  score: number | null,
+  status: ListStatus | null,
+  listScore: number | null = null,
+): number {
   if (score !== null) return VERDICT_WEIGHTS[valueToRating(score)];
+  if (listScore !== null) return Math.max(-1, Math.min(1, (listScore - 65) / 25));
   switch (status) {
     case "completed":
       return 0.6;
@@ -82,7 +94,7 @@ export function signalWeight(score: number | null, status: ListStatus | null): n
  * ("Attack on Titan Season 3 Part 2" -> "attack on titan"), so recommendations don't
  * fill up with one franchise.
  */
-export function franchiseKey(row: Pick<MediaRow, "titleEnglish" | "titleRomaji">) {
+export function franchiseKey(row: Pick<CardRow, "titleEnglish" | "titleRomaji">) {
   return (
     (row.titleEnglish ?? row.titleRomaji)
       .toLowerCase()
@@ -99,7 +111,7 @@ export function franchiseKey(row: Pick<MediaRow, "titleEnglish" | "titleRomaji">
 }
 
 /** Keeps the best-scored title of each franchise, in score order. */
-function onePerFranchise<T extends { row: MediaRow }>(ranked: T[], limit: number): T[] {
+function onePerFranchise<T extends { row: CardRow }>(ranked: T[], limit: number): T[] {
   const seen = new Set<string>();
   const picked: T[] = [];
   for (const item of ranked) {
@@ -112,7 +124,7 @@ function onePerFranchise<T extends { row: MediaRow }>(ranked: T[], limit: number
   return picked;
 }
 
-function clubAverage(row: MediaRow): number | null {
+function clubAverage(row: CardRow): number | null {
   return row.clubReviewCount > 0 ? row.clubScoreSum / row.clubReviewCount : null;
 }
 
@@ -141,6 +153,7 @@ async function tasteSignals(db: Db, userId: string) {
       tags: media.tags,
       score: reviews.score,
       status: listEntries.status,
+      listScore: listEntries.score,
     })
     .from(media)
     .leftJoin(reviews, and(eq(reviews.mediaId, media.id), eq(reviews.userId, userId)))
@@ -180,7 +193,7 @@ async function collaborativeScores(db: Db, userId: string) {
 }
 
 export interface Recommendation {
-  row: MediaRow;
+  row: CardRow;
   score: number;
   reasons: string[];
 }
@@ -198,7 +211,7 @@ export async function recommendFor(
   // TV series vs movies vs one-shots: members tend to stick to the formats they enjoy.
   const formatAffinity = new Map<string, number>();
   for (const signal of signals) {
-    const weight = signalWeight(signal.score, signal.status);
+    const weight = signalWeight(signal.score, signal.status, signal.listScore);
     if (signal.format) {
       formatAffinity.set(signal.format, (formatAffinity.get(signal.format) ?? 0) + weight);
     }
@@ -217,7 +230,7 @@ export async function recommendFor(
   // Franchises the member loved, so sequels and adaptations can say so.
   const lovedFranchises = new Map<string, { title: string; type: "anime" | "manga" }>();
   for (const signal of signals) {
-    if (signalWeight(signal.score, signal.status) >= 0.6) {
+    if (signalWeight(signal.score, signal.status, signal.listScore) >= 0.6) {
       lovedFranchises.set(franchiseKey(signal), {
         title: signal.titleEnglish ?? signal.titleRomaji,
         type: signal.type,
@@ -239,7 +252,7 @@ export async function recommendFor(
   const coldStart = signals.length === 0;
 
   const candidates = await db
-    .select()
+    .select(CARD_COLUMNS)
     .from(media)
     .where(
       and(
@@ -374,7 +387,7 @@ export async function similarTo(db: Db, mediaId: number, limit: number) {
   if (reach.length === 0) return [];
 
   const candidates = await db
-    .select()
+    .select(CARD_COLUMNS)
     .from(media)
     .where(
       and(
@@ -427,6 +440,6 @@ export async function similarTo(db: Db, mediaId: number, limit: number) {
   return onePerFranchise(ranked, limit);
 }
 
-export function toRecommendationJson({ row, reasons }: { row: MediaRow; reasons: string[] }) {
+export function toRecommendationJson({ row, reasons }: { row: CardRow; reasons: string[] }) {
   return { media: toMediaSummary(row), reasons };
 }

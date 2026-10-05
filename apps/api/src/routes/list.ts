@@ -3,6 +3,7 @@ import { describeRoute } from "hono-openapi";
 import { z } from "zod";
 
 import type { Db } from "../db/client.js";
+import type { AnilistClient } from "../lib/anilist.js";
 import { AppError } from "../lib/errors.js";
 import { validate } from "../lib/validation.js";
 import { requireAuth, requireUsername } from "../middleware/auth.js";
@@ -11,6 +12,7 @@ import {
   LIST_STATUSES,
   findUserIdByUsername,
   getEntry,
+  importFromAnilist,
   listEntriesOf,
   removeEntry,
   saveEntry,
@@ -34,13 +36,23 @@ const saveBody = z.strictObject({
   progress: z.number().int().min(0).max(100_000).optional(),
 });
 
+// AniList usernames: 2-20 letters and numbers.
+const importBody = z.strictObject({
+  source: z.literal("anilist"),
+  username: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9]{2,20}$/, "Enter your AniList username (letters and numbers)"),
+});
+
 interface ListRouteDeps {
   db: Db;
+  anilist: AnilistClient;
   isTrustedProxy: (ip: string) => boolean;
 }
 
 /** Watchlists and reading lists. Lists are public, like on AniList. */
-export function listRoutes({ db, isTrustedProxy }: ListRouteDeps) {
+export function listRoutes({ db, anilist, isTrustedProxy }: ListRouteDeps) {
   const writeLimit = rateLimit({
     name: "list-writes",
     windowMs: 60_000,
@@ -49,8 +61,38 @@ export function listRoutes({ db, isTrustedProxy }: ListRouteDeps) {
     keyBy: (c) => c.get("user")?.id,
   });
 
+  // Each import can take a dozen AniList requests, so members get a few per 10 minutes.
+  const importLimit = rateLimit({
+    name: "list-imports",
+    windowMs: 10 * 60_000,
+    max: 3,
+    isTrustedProxy,
+    keyBy: (c) => c.get("user")?.id,
+  });
+
   return (
     new Hono<AppEnv>()
+      .post(
+        "/import",
+        describeRoute({
+          tags: ["Lists"],
+          summary: "Import your AniList anime and manga lists (statuses, progress, scores)",
+          security: [{ session: [] }],
+        }),
+        requireUsername,
+        importLimit,
+        validate("json", importBody),
+        async (c) =>
+          c.json(
+            await importFromAnilist(
+              db,
+              anilist,
+              c.get("user")?.id ?? "",
+              c.req.valid("json").username,
+            ),
+          ),
+      )
+
       // ?user=<username> for anyone's list; without it, the signed-in member's own.
       .get(
         "/",

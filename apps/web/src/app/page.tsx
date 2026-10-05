@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import Link from "next/link";
 
 import { HeroBanner } from "@/components/hero-banner";
@@ -12,14 +13,23 @@ import { weekLabel } from "@/lib/week";
 
 const UNAVAILABLE = "We couldn't load this right now. Please try again in a moment.";
 
+/** The popular shelves, one per kind (manga is Japanese; manhwa Korean; manhua Chinese). */
+const SHELVES = [
+  { kind: "anime", title: "Most popular anime" },
+  { kind: "manga", title: "Most popular manga" },
+  { kind: "manhwa", title: "Most popular manhwa" },
+  { kind: "manhua", title: "Most popular manhua" },
+] as const;
+
 export default async function HomePage() {
-  const [anime, manga, week, reviews, user] = await Promise.all([
-    apiGet<Page<MediaSummary>>("/api/media?type=anime&sort=popularity&limit=6", 600, [
-      TAGS.mediaLists,
-    ]),
-    apiGet<Page<MediaSummary>>("/api/media?type=manga&sort=popularity&limit=6", 600, [
-      TAGS.mediaLists,
-    ]),
+  const [shelves, week, reviews, user] = await Promise.all([
+    Promise.all(
+      SHELVES.map(({ kind }) =>
+        apiGet<Page<MediaSummary>>(`/api/media?type=${kind}&sort=popularity&limit=6`, 600, [
+          TAGS.mediaLists,
+        ]),
+      ),
+    ),
     apiGet<CurrentWeek>("/api/club/suggestions/current", 60, [TAGS.club]),
     apiGetAsViewer<Page<Review>>("/api/reviews?sort=recent&limit=6", 30, [TAGS.reviews]),
     getCurrentUser(),
@@ -72,41 +82,29 @@ export default async function HomePage() {
         )}
       </HomeSection>
 
-      <HomeSection
-        id="popular-anime"
-        title="Most popular anime"
-        seeAll={{ href: "/browse", label: "Browse all" }}
-      >
-        {anime?.items.length ? (
-          <Reveal className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
-            {anime.items.map((media) => (
-              <div key={media.id} className="reveal-item">
-                <MediaCard media={media} />
-              </div>
-            ))}
-          </Reveal>
-        ) : (
-          <EmptyState>{UNAVAILABLE}</EmptyState>
-        )}
-      </HomeSection>
-
-      <HomeSection
-        id="popular-manga"
-        title="Most popular manga"
-        seeAll={{ href: "/browse", label: "Browse all" }}
-      >
-        {manga?.items.length ? (
-          <Reveal className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
-            {manga.items.map((media) => (
-              <div key={media.id} className="reveal-item">
-                <MediaCard media={media} />
-              </div>
-            ))}
-          </Reveal>
-        ) : (
-          <EmptyState>{UNAVAILABLE}</EmptyState>
-        )}
-      </HomeSection>
+      {SHELVES.map(({ kind, title }, i) => {
+        const shelf = shelves[i];
+        return (
+          <HomeSection
+            key={kind}
+            id={`popular-${kind}`}
+            title={title}
+            seeAll={{ href: `/browse?type=${kind}` as Route, label: "Browse all" }}
+          >
+            {shelf?.items.length ? (
+              <Reveal className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
+                {shelf.items.map((media) => (
+                  <div key={media.id} className="reveal-item">
+                    <MediaCard media={media} />
+                  </div>
+                ))}
+              </Reveal>
+            ) : (
+              <EmptyState>{UNAVAILABLE}</EmptyState>
+            )}
+          </HomeSection>
+        );
+      })}
 
       <HomeSection
         id="latest-reviews"

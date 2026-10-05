@@ -31,8 +31,8 @@ export default async function BrowsePage({ searchParams }: { searchParams: Searc
       <header>
         <h1 className="font-display text-5xl tracking-wide sm:text-6xl">Browse</h1>
         <p className="mt-1 text-muted">
-          Every anime and manga in the club&apos;s catalog. Filters stay in the address, so you can
-          share a search.
+          Every anime, manga, manhwa and manhua in the club&apos;s catalog. Filters stay in the
+          address, so you can share a search.
         </p>
       </header>
 
@@ -67,7 +67,8 @@ export default async function BrowsePage({ searchParams }: { searchParams: Searc
         <DiscoverMore
           key={`discover-${resultsKey}`}
           q={filters.q}
-          type={filters.type}
+          // AniList itself only knows anime and manga (manhwa and manhua included).
+          type={filters.type === null || filters.type === "anime" ? filters.type : "manga"}
           knownIds={first.items.map((m) => m.id)}
         />
       )}

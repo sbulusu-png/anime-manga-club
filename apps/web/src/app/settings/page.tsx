@@ -13,9 +13,12 @@ import { apiGetAsViewer, requireMember } from "@/lib/server-api";
 export const metadata: Metadata = { title: "Account settings", robots: { index: false } };
 
 export default async function SettingsPage() {
-  const user = await requireMember("/settings");
   // Which ways this member can sign in: "credential" (a password) and/or "google".
-  const accounts = await apiGetAsViewer<{ providerId: string }[]>("/api/auth/list-accounts");
+  // Requested alongside the sign-in check rather than after it.
+  const [user, accounts] = await Promise.all([
+    requireMember("/settings"),
+    apiGetAsViewer<{ providerId: string }[]>("/api/auth/list-accounts"),
+  ]);
   const providers = new Set((accounts ?? []).map((a) => a.providerId));
   const hasPassword = providers.has("credential");
   const username = user.username ?? "";

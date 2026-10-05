@@ -103,7 +103,7 @@ export function createApp(deps: AppDeps) {
   app.route("/api/me", meRoutes);
   app.route("/api/media", mediaRoutes({ db, anilist, isTrustedProxy }));
   app.route("/api/reviews", reviewRoutes({ db, isTrustedProxy }));
-  app.route("/api/list", listRoutes({ db, isTrustedProxy }));
+  app.route("/api/list", listRoutes({ db, anilist, isTrustedProxy }));
   app.route("/api/users", userRoutes({ db }));
   app.route("/api/club", clubRoutes({ db, timeZone: env.CLUB_TIMEZONE }));
   app.route("/api/recommendations", recommendationRoutes({ db }));
@@ -181,5 +181,3 @@ export function createApp(deps: AppDeps) {
 
   return app;
 }
-
-export type App = ReturnType<typeof createApp>;

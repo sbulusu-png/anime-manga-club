@@ -11,6 +11,7 @@
   },
   "scripts": {
     "dev": "concurrently --names api,web --prefix-colors blue,magenta --kill-others-on-fail \"npm run dev --workspace @amc/api\" \"npm run dev --workspace @amc/web\"",
+    "start": "concurrently --names api,web --prefix-colors blue,magenta --kill-others-on-fail \"npm run start --workspace @amc/api\" \"npm run start --workspace @amc/web\"",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",

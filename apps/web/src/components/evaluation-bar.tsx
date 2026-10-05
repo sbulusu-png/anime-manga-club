@@ -21,11 +21,14 @@ export function EvaluationBar({
   counts,
   noun = "vote",
   center,
+  wide = false,
 }: {
   counts: Record<Rating, number>;
   /** What each count is ("vote", "review"), for the screen-reader summary. */
   noun?: string;
   center?: ReactNode;
+  /** Side by side (gauge, then legend) from the sm breakpoint, for wide cards. */
+  wide?: boolean;
 }) {
   const total = RATINGS.reduce((sum, rating) => sum + counts[rating], 0);
   const plural = (n: number) => `${String(n)} ${n === 1 ? noun : `${noun}s`}`;
@@ -47,8 +50,10 @@ export function EvaluationBar({
   }));
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="relative mx-auto w-full max-w-60">
+    <div className={`flex flex-col gap-3 ${wide ? "sm:flex-row sm:items-center sm:gap-10" : ""}`}>
+      <div
+        className={`relative mx-auto w-full max-w-60 ${wide ? "sm:mx-0 sm:w-60 sm:shrink-0" : ""}`}
+      >
         <svg
           viewBox="0 0 200 110"
           role="img"
@@ -84,7 +89,10 @@ export function EvaluationBar({
         ) : null}
       </div>
 
-      <ul aria-hidden="true" className="flex flex-col gap-1.5 text-xs">
+      <ul
+        aria-hidden="true"
+        className={`flex flex-col gap-1.5 text-xs ${wide ? "sm:max-w-xs sm:flex-1 sm:text-sm" : ""}`}
+      >
         {RATINGS.map((rating) => {
           const info = RATING_INFO[rating];
           const count = counts[rating];

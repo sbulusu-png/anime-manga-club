@@ -8,6 +8,7 @@ import { AppError } from "../lib/errors.js";
 import { validate } from "../lib/validation.js";
 import { rateLimit } from "../middleware/rate-limit.js";
 import {
+  MEDIA_KINDS,
   MEDIA_SORTS,
   discoverMedia,
   getCharacters,
@@ -44,7 +45,8 @@ const upperWord = z
   .regex(/^[A-Z_]{1,30}$/, "must be a single AniList value like TV or FINISHED");
 
 const listQuery = z.object({
-  type: mediaType.optional(),
+  // Browse also splits comics by origin: manga (Japan), manhwa (Korea), manhua (China).
+  type: z.enum(MEDIA_KINDS).optional(),
   q: z.string().trim().min(1).max(100).optional(),
   genre: stringList.optional(),
   tag: stringList.optional(),

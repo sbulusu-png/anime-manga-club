@@ -47,7 +47,15 @@ export const RESULTS_GRID =
   "grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6";
 
 export type Sort = (typeof SORTS)[number]["value"];
-export type MediaType = "anime" | "manga";
+export type MediaType = "anime" | "manga" | "manhwa" | "manhua";
+
+/** "Manhwa", for headings and labels. */
+export const KIND_LABELS: Record<MediaType, string> = {
+  anime: "Anime",
+  manga: "Manga",
+  manhwa: "Manhwa",
+  manhua: "Manhua",
+};
 
 export interface Filters {
   q: string;
@@ -86,13 +94,12 @@ const oneOf = <T extends string>(value: string, options: readonly { value: T }[]
  * old or hand-edited link still shows results instead of an error.
  */
 export function parseFilters(params: Params): Filters {
-  const type = oneOf(first(params.type), [{ value: "anime" }, { value: "manga" }] as const);
+  const type = oneOf(
+    first(params.type),
+    (Object.keys(KIND_LABELS) as MediaType[]).map((value) => ({ value })),
+  );
   const formats =
-    type === "manga"
-      ? MANGA_FORMATS
-      : type === "anime"
-        ? ANIME_FORMATS
-        : [...ANIME_FORMATS, ...MANGA_FORMATS];
+    type === "anime" ? ANIME_FORMATS : type ? MANGA_FORMATS : [...ANIME_FORMATS, ...MANGA_FORMATS];
   const genreValues = params.genre === undefined ? [] : [params.genre].flat();
   const year = Number(first(params.year));
 
@@ -106,7 +113,7 @@ export function parseFilters(params: Params): Filters {
     format: oneOf(first(params.format), formats),
     status: oneOf(first(params.status), STATUSES),
     // Seasons only exist for anime.
-    season: type === "manga" ? null : oneOf(first(params.season), SEASONS),
+    season: type && type !== "anime" ? null : oneOf(first(params.season), SEASONS),
     year: Number.isInteger(year) && year >= MIN_YEAR && year <= MAX_YEAR ? year : null,
     sort: oneOf(first(params.sort), SORTS) ?? "popularity",
   };

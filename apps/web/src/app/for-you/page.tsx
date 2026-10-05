@@ -24,14 +24,15 @@ const plural = (n: number, one: string, many: string) => `${String(n)} ${n === 1
 
 /** Personal suggestions, each with the reasons it was picked. */
 export default async function ForYouPage({ searchParams }: { searchParams: SearchParams }) {
-  const user = await requireMember("/for-you");
   const requested = param((await searchParams).type);
   const type = requested === "anime" || requested === "manga" ? requested : null;
 
   // Personal, so never cached (apiGetAsViewer skips the cache for signed-in members).
-  const data = await apiGetAsViewer<ForYou>(
-    `/api/recommendations?limit=24${type ? `&type=${type}` : ""}`,
-  );
+  // Requested alongside the sign-in check rather than after it.
+  const [user, data] = await Promise.all([
+    requireMember("/for-you"),
+    apiGetAsViewer<ForYou>(`/api/recommendations?limit=24${type ? `&type=${type}` : ""}`),
+  ]);
   const signals = data ? data.basedOn.reviews + data.basedOn.listEntries : 0;
 
   return (

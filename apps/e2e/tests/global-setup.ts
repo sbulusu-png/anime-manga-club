@@ -11,6 +11,7 @@ import {
   MEMBER_STATE,
 } from "./accounts";
 import { withDb } from "./db";
+import globalTeardown from "./global-teardown";
 
 // Sign-in allows 3 tries per 10 seconds per IP; every request here shares one IP.
 const RATE_WINDOW_MS = 10_500;
@@ -85,6 +86,9 @@ async function createAccount(
 
 export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0]?.use.baseURL ?? "http://localhost:3000";
+  // Clear anything an interrupted earlier run left behind (it couldn't tear down), so
+  // tests only ever see this run's accounts.
+  await globalTeardown();
   mkdirSync(AUTH_DIR, { recursive: true });
   await ensureCatalog();
 

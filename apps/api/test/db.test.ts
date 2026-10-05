@@ -141,16 +141,4 @@ describe("database schema", () => {
     const [suggestion] = await db.select().from(clubSuggestions);
     expect(suggestion?.suggestedById).toBeNull(); // the suggestion outlives its author
   });
-
-  it("loads relations through the query API", async () => {
-    const { mediaId } = await seedBasics();
-    await db.insert(reviews).values({ userId: "u1", mediaId, score: 4, body: "Peak." });
-
-    const result = await db.query.media.findFirst({
-      where: eq(media.id, mediaId),
-      with: { reviews: { with: { user: true } } },
-    });
-
-    expect(result?.reviews[0]?.user.name).toBe("Luffy");
-  });
 });

@@ -168,6 +168,22 @@ describe("recommendations for you", () => {
     expect(forBob.items[0]?.reasons[0]).toBe("The manga of Blade Quest, which you loved");
   });
 
+  it("learns from scores on an imported list", async () => {
+    // Loved an action title (scored 92), disliked a romance one (scored 30): no reviews.
+    await db.insert(listEntries).values([
+      { userId: alice.id, mediaId: id("Blade Quest"), status: "completed", score: 92 },
+      { userId: alice.id, mediaId: id("Love Letters"), status: "completed", score: 30 },
+    ]);
+
+    const ranked = names((await recommend(alice, "?limit=50")).items);
+    expect(ranked).toContain("Sword Saga");
+    // Romance is out: the low score counts against it, so it isn't even a candidate.
+    expect(ranked).not.toContain("Heart Beats");
+    // A high score counts as loved, so the manga of the same series says so.
+    const manga = (await recommend(alice, "?type=manga")).items[0];
+    expect(manga?.reasons[0]).toBe("The manga of Blade Quest, which you loved");
+  });
+
   it("filters by type and reports what it was based on", async () => {
     await review(alice, "Blade Quest", "perfection");
     await db
@@ -276,5 +292,10 @@ describe("signalWeight", () => {
     expect(signalWeight(null, "dropped")).toBeLessThan(0);
     // A verdict beats list status: "Skip" on a completed title is still a dislike.
     expect(signalWeight(ratingToValue("skip"), "completed")).toBeLessThan(0);
+    // Imported AniList scores (0-100) outrank the bare status, but not a verdict.
+    expect(signalWeight(null, "completed", 95)).toBe(1);
+    expect(signalWeight(null, "completed", 80)).toBeCloseTo(0.6);
+    expect(signalWeight(null, "completed", 40)).toBe(-1);
+    expect(signalWeight(ratingToValue("perfection"), "completed", 20)).toBe(1);
   });
 });

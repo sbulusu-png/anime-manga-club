@@ -18,14 +18,24 @@ const FORMAT_LABELS: Record<string, string> = {
   ONE_SHOT: "One-shot",
 };
 
-/** "TV short", "Light novel"; falls back to the type when AniList has no format. */
-export function formatLabel(media: Pick<MediaSummary, "type" | "format">): string {
-  const format = media.format ? (FORMAT_LABELS[media.format] ?? media.format) : null;
-  return format ?? (media.type === "anime" ? "Anime" : "Manga");
+const KIND_LABELS: Record<MediaSummary["kind"], string> = {
+  anime: "Anime",
+  manga: "Manga",
+  manhwa: "Manhwa",
+  manhua: "Manhua",
+};
+
+/**
+ * "TV short", "Light novel"; a comic's MANGA format reads as what it really is (manhwa,
+ * manhua), and the kind stands in when AniList has no format.
+ */
+export function formatLabel(media: Pick<MediaSummary, "kind" | "format">): string {
+  if (!media.format || media.format === "MANGA") return KIND_LABELS[media.kind];
+  return FORMAT_LABELS[media.format] ?? media.format;
 }
 
 /** "TV · 2013", "Manga · 1997", or just the type when AniList has no details. */
-export function mediaMeta(media: Pick<MediaSummary, "type" | "format" | "year">): string {
+export function mediaMeta(media: Pick<MediaSummary, "kind" | "format" | "year">): string {
   const kind = formatLabel(media);
   return media.year ? `${kind} · ${media.year}` : kind;
 }

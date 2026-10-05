@@ -16,23 +16,26 @@ export function Reveal({ children, className }: { children: ReactNode; className
   const rootRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
-    () => {
-      const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
+    (_context, contextSafe) => {
+      // Batches arrive after this hook has run; contextSafe keeps their tweens in the
+      // context, so they're cleaned up on unmount like everything else.
+      const reveal = contextSafe?.((batch: Element[]) =>
+        gsap.to(batch, {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power3.out",
+          stagger: 0.07,
+          overwrite: true,
+        }),
+      );
+      gsap.matchMedia().add("(prefers-reduced-motion: no-preference)", () => {
         const items = gsap.utils.toArray<HTMLElement>(".reveal-item", rootRef.current);
         gsap.set(items, { autoAlpha: 0, y: 32 });
         ScrollTrigger.batch(items, {
           start: "top 90%",
           once: true,
-          onEnter: (batch) =>
-            gsap.to(batch, {
-              autoAlpha: 1,
-              y: 0,
-              duration: 0.6,
-              ease: "power3.out",
-              stagger: 0.07,
-              overwrite: true,
-            }),
+          onEnter: (batch) => reveal?.(batch),
         });
       });
     },

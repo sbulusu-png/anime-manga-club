@@ -104,17 +104,13 @@ export function MoreReviews({
   );
 }
 
-/** A list entry: the cover, plus where the member is with it. */
+/** A list entry: the cover, plus its status. */
 export function ListEntryCard({ entry }: { entry: ListEntry }) {
-  const unit = entry.media.type === "anime" ? "ep" : "ch";
   return (
     <div className="flex flex-col gap-1.5">
       <MediaCard media={entry.media} />
-      <p className="px-0.5 text-xs text-muted">
-        <span className="font-semibold text-ink">
-          {statusLabel(entry.status, entry.media.type)}
-        </span>
-        {` · ${unit} ${String(entry.progress)}${entry.total ? `/${String(entry.total)}` : ""}`}
+      <p className="px-0.5 text-xs font-semibold text-ink">
+        {statusLabel(entry.status, entry.media.type)}
       </p>
     </div>
   );

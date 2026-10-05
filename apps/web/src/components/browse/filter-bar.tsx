@@ -27,6 +27,8 @@ const TYPES = [
   { value: null, label: "All" },
   { value: "anime", label: "Anime" },
   { value: "manga", label: "Manga" },
+  { value: "manhwa", label: "Manhwa" },
+  { value: "manhua", label: "Manhua" },
 ] as const;
 
 /**
@@ -85,10 +87,10 @@ export function FilterBar({ filters, genres }: { filters: Filters; genres: strin
   };
 
   const formats =
-    filters.type === "manga"
-      ? MANGA_FORMATS
-      : filters.type === "anime"
-        ? ANIME_FORMATS
+    filters.type === "anime"
+      ? ANIME_FORMATS
+      : filters.type
+        ? MANGA_FORMATS
         : [...ANIME_FORMATS, ...MANGA_FORMATS];
 
   return (
@@ -162,7 +164,7 @@ export function FilterBar({ filters, genres }: { filters: Filters; genres: strin
                   update({
                     type: type.value,
                     format: null,
-                    season: type.value === "manga" ? null : filters.season,
+                    season: type.value && type.value !== "anime" ? null : filters.season,
                   });
                 }}
                 className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
@@ -224,7 +226,7 @@ export function FilterBar({ filters, genres }: { filters: Filters; genres: strin
             update({ status });
           }}
         />
-        {filters.type !== "manga" && (
+        {(filters.type === null || filters.type === "anime") && (
           <Select
             label="Season"
             value={filters.season}

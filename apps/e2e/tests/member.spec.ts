@@ -38,7 +38,7 @@ test("a member reviews a title, tracks it on their list, and sees it on their pr
     timeout: 30_000,
   });
 
-  // The list: four status buttons, with progress while watching.
+  // The list: four status buttons, no episode counter.
   const list = page.getByRole("group", { name: "On your list" });
   await expect(list.getByRole("button")).toHaveText(["Watching", "Completed", "Paused", "Dropped"]);
   await list.getByRole("button", { name: "Watching" }).click();
@@ -47,15 +47,14 @@ test("a member reviews a title, tracks it on their list, and sees it on their pr
     "aria-pressed",
     "true",
   );
-  await page.getByRole("button", { name: "One episode more" }).click();
-  await expect(page.getByLabel("Episodes watched")).toHaveValue("1");
+  await expect(page.getByRole("spinbutton")).toHaveCount(0);
 
   // The profile shows both.
   await page.goto(`/u/${member.username}`);
   await expect(page.getByRole("heading", { level: 1, name: member.username })).toBeVisible();
   await expect(page.getByText("End-to-end test review")).toBeVisible();
   await page.getByRole("link", { name: /Anime list \(1\)/ }).click();
-  await expect(page.getByText(/Watching · ep 1/)).toBeVisible();
+  await expect(page.getByText("Watching", { exact: true })).toBeVisible();
 
   // Editing and deleting.
   await page.goto(href);
@@ -104,6 +103,18 @@ test("a member likes another member's review", async ({ page, baseURL }) => {
   ).toBeVisible();
 });
 
+test("the import page checks the AniList username before asking AniList", async ({ page }) => {
+  await page.goto("/");
+  await page.goto(await pickTitle(page));
+  await page.getByRole("link", { name: "Import your anime list" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Import your list" })).toBeVisible();
+  await page.getByLabel("AniList username").fill("not a name!");
+  await page.getByRole("button", { name: "Import my list" }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Enter your AniList username" }),
+  ).toBeVisible();
+});
+
 test("members can't open the club lead panel", async ({ page }) => {
   const response = await page.goto("/admin");
   expect(response?.status()).toBe(404);
@@ -112,7 +123,8 @@ test("members can't open the club lead panel", async ({ page }) => {
 test("member pages have no accessibility violations", async ({ page }) => {
   const { member } = accounts();
   await page.emulateMedia({ reducedMotion: "reduce" });
-  for (const path of ["/for-you", "/settings", `/u/${member.username}`, await pickTitle(page)]) {
+  const title = await pickTitle(page);
+  for (const path of ["/for-you", "/settings", "/import", `/u/${member.username}`, title]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
     const { violations } = await new AxeBuilder({ page })

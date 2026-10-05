@@ -30,6 +30,16 @@ export async function refreshAfterAccountDeleted(username: string) {
   return Promise.resolve();
 }
 
+/**
+ * Called after a member imports their AniList list: new titles may have joined the
+ * catalog, and their profile's list and stats changed.
+ */
+export async function refreshAfterListImport() {
+  updateTag(TAGS.mediaLists);
+  const user = await getCurrentUser();
+  if (user?.username) updateTag(TAGS.profile(user.username));
+}
+
 /** Called after a club lead changes a week's suggestions. */
 export async function refreshClubSuggestions() {
   updateTag(TAGS.club);

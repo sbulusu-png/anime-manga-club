@@ -10,7 +10,11 @@ const config: NextConfig = {
   productionBrowserSourceMaps: false,
   // Links to pages that don't exist fail the type check.
   typedRoutes: true,
+  // No "Rendering…"/"Compiling…" badge in the corner while developing locally.
+  devIndicators: false,
   images: {
+    // AVIF first: covers and banners come out 20-50% smaller than WebP.
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       { protocol: "https", hostname: "s4.anilist.co", pathname: "/file/anilistcdn/**" },
     ],

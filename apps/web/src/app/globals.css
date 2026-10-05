@@ -46,6 +46,7 @@
   --petal-1: #ffc2d6;
   --petal-2: #ff8fb3;
   --petal-opacity: 0.75;
+  --rail-opacity: 0.32;
 }
 
 .dark {
@@ -79,6 +80,7 @@
   --petal-1: #ffb3cc;
   --petal-2: #e0527f;
   --petal-opacity: 0.4;
+  --rail-opacity: 0.38;
 }
 
 @theme inline {
@@ -115,6 +117,32 @@
   body {
     background: var(--bg);
     color: var(--ink);
+  }
+  /*
+   * A kunai for the mouse pointer (public/cursors), red-handled over anything clickable.
+   * The hotspot (5 5) is the blade's tip. Text fields keep the normal text cursor, and
+   * browsers that can't show it fall back to their own.
+   */
+  html {
+    cursor:
+      url("/cursors/kunai-default.svg") 5 5,
+      auto;
+  }
+  a,
+  button,
+  label,
+  select,
+  summary,
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor:
+      url("/cursors/kunai-pointer.svg") 5 5,
+      pointer;
+  }
+  input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"]),
+  textarea {
+    cursor: text;
   }
   :focus-visible {
     outline: 3px solid var(--focus);
@@ -229,6 +257,69 @@
       transform: translate3d(0, 105vh, 0) rotate(400deg);
     }
   }
+  /*
+   * Popular characters in the page margins (components/character-rails.tsx). Wide screens
+   * only: the rails fill the space beside the 72rem content column, and the veil (the page
+   * colour, fading in at its edges) sits between them and the content, so text keeps
+   * exactly the contrast measured above.
+   */
+  .character-rails {
+    display: none;
+  }
+  @media (min-width: 1280px) {
+    .character-rails {
+      display: block;
+    }
+  }
+  .character-rail {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: calc((100vw - 72rem) / 2 + 1rem);
+    overflow: hidden;
+    opacity: var(--rail-opacity);
+    mask-image: linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+  }
+  .character-rail--left {
+    left: 0;
+  }
+  .character-rail--right {
+    right: 0;
+  }
+  .character-rail__track {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3rem;
+    padding: 7rem 0;
+    will-change: transform;
+  }
+  .character-rail__panel {
+    position: relative;
+    flex: none;
+    width: clamp(6rem, calc((100vw - 72rem) / 2 - 1rem), 11rem);
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border: 3px solid var(--surface-2);
+    border-radius: 1rem;
+    box-shadow: var(--shadow);
+    filter: saturate(0.85);
+  }
+  .character-rails__veil {
+    position: absolute;
+    inset: 0;
+    width: min(100%, 76rem);
+    margin-inline: auto;
+    background: var(--bg);
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 3rem,
+      #000 calc(100% - 3rem),
+      transparent
+    );
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .anime-backdrop__petal {
       display: none;

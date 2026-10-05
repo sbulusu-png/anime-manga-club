@@ -82,7 +82,8 @@ export function HeroBanner() {
             )
             .from(
               ".banner-tagline",
-              { autoAlpha: 0, letterSpacing: "0.9em", duration: 0.6 },
+              // Transform and opacity only: animating letter-spacing would re-run layout.
+              { autoAlpha: 0, y: 12, duration: 0.6 },
               "<0.3",
             );
         },

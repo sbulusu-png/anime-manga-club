@@ -14,6 +14,8 @@ export interface MediaSummary {
   id: number;
   anilistId: number;
   type: "anime" | "manga";
+  /** Comics split by origin: manga (Japan), manhwa (Korea), manhua (China/Taiwan). */
+  kind: "anime" | "manga" | "manhwa" | "manhua";
   format: string | null;
   status: string | null;
   title: { display: string; romaji: string; english: string | null; native: string | null };
@@ -105,6 +107,12 @@ export interface ListEntry {
   createdAt: string;
   updatedAt: string;
   media: MediaSummary;
+}
+
+/** What POST /api/list/import brought in. */
+export interface ImportSummary {
+  imported: { anime: number; manga: number };
+  skipped: { planning: number; adult: number };
 }
 
 export interface Profile {

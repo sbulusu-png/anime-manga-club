@@ -18,6 +18,7 @@
     "db:studio": "node --env-file-if-exists=../../.env ../../node_modules/drizzle-kit/bin.cjs studio",
     "user:set-role": "tsx --env-file-if-exists=../../.env src/scripts/set-role.ts",
     "db:smoke": "tsx --env-file-if-exists=../../.env src/scripts/db-smoke.ts",
+    "titles:refresh": "tsx --env-file-if-exists=../../.env src/scripts/refresh-titles.ts",
     "db:check-drift": "drizzle-kit generate --name drift_check && git diff --exit-code --stat -- drizzle && test -z \"$(git ls-files --others --exclude-standard -- drizzle)\""
   },
   "dependencies": {

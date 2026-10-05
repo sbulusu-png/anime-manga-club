@@ -221,14 +221,15 @@ function ReviewForm({
     >
       <fieldset aria-describedby={errors.rating ? `${bodyId}-rating-error` : undefined}>
         <legend className="mb-3 font-semibold">How would you rate it?</legend>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {/* One per row: the form sits in the title page's narrow side column. */}
+        <div className="flex flex-col gap-2">
           {RATINGS.map((value) => {
             const info = RATING_INFO[value];
             const checked = rating === value;
             return (
               <label
                 key={value}
-                className={`flex cursor-pointer flex-col items-center gap-1 rounded-xl border-2 px-3 py-3 text-center has-focus-visible:outline-3 has-focus-visible:outline-focus ${
+                className={`flex items-center gap-3 rounded-xl border-2 px-3 py-2.5 has-focus-visible:outline-3 has-focus-visible:outline-focus ${
                   checked
                     ? `${info.soft} ${info.text} border-current`
                     : "border-border hover:bg-surface-2"
@@ -245,9 +246,11 @@ function ReviewForm({
                   }}
                   className="sr-only"
                 />
-                <VerdictDot rating={value} className="size-6" />
-                <span className="font-bold">{info.label}</span>
-                <span className={`text-xs ${checked ? "" : "text-muted"}`}>{info.blurb}</span>
+                <VerdictDot rating={value} className="size-5" />
+                <span className="flex min-w-0 flex-col">
+                  <span className="font-bold leading-tight">{info.label}</span>
+                  <span className={`text-xs ${checked ? "" : "text-muted"}`}>{info.blurb}</span>
+                </span>
               </label>
             );
           })}

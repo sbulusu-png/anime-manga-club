@@ -23,10 +23,19 @@ export const media = pgTable(
     type: mediaType().notNull(),
     // AniList enums kept as text so new values upstream never break inserts.
     format: text(), // TV, MOVIE, OVA, MANGA, ONE_SHOT, ...
+    // Where it's from: JP, KR (manhwa), CN or TW (manhua). AniList calls all comics MANGA.
+    country: text(),
     status: text(), // FINISHED, RELEASING, NOT_YET_RELEASED, ...
     titleRomaji: text().notNull(),
     titleEnglish: text(),
     titleNative: text(),
+    // Other names from AniList: abbreviations ("AoT"), alternative spellings, translations.
+    synonyms: text()
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    // Every title and synonym run through lib/title-key.ts, for forgiving search.
+    searchKey: text().notNull().default(""),
     synopsis: text(),
     coverImageUrl: text(),
     coverColor: text(),
@@ -60,6 +69,7 @@ export const media = pgTable(
   },
   (t) => [
     index().on(t.type, t.popularity.desc()),
+    index().on(t.type, t.country, t.popularity.desc()),
     check(
       "media_club_stats_non_negative",
       sql`${t.clubReviewCount} >= 0 and ${t.clubScoreSum} >= 0`,
@@ -70,5 +80,6 @@ export const media = pgTable(
     index("media_title_romaji_trgm_index").using("gin", t.titleRomaji.op("gin_trgm_ops")),
     index("media_title_english_trgm_index").using("gin", t.titleEnglish.op("gin_trgm_ops")),
     index("media_title_native_trgm_index").using("gin", t.titleNative.op("gin_trgm_ops")),
+    index("media_search_key_trgm_index").using("gin", t.searchKey.op("gin_trgm_ops")),
   ],
 );

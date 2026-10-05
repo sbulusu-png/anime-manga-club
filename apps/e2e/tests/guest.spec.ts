@@ -55,6 +55,28 @@ test.describe("visitors", () => {
     await expect(page.getByRole("link", { name: "Sign in to add to your list" })).toBeVisible();
   });
 
+  test("opening a title from far down a page starts at its top", async ({ page }) => {
+    await page.goto("/browse");
+    const card = page.locator('main a[href^="/media/"]').first();
+    await expect(card).toBeVisible();
+    // Push the results far down, whatever the catalog's size, then open one from there.
+    // (Padding on the browse page's own outer element: React leaves its style alone, and
+    // the next page replaces it, so the padding doesn't follow us there.)
+    await page.waitForLoadState("networkidle");
+    await page
+      .locator("main > *")
+      .first()
+      .evaluate((browsePage) => {
+        (browsePage as HTMLElement).style.paddingTop = "3000px";
+      });
+    await card.scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(1500);
+    await card.click();
+    await expect(page).toHaveURL(/\/media\/\d+$/);
+    await expect(page.getByRole("heading", { level: 1 })).toBeInViewport();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(200);
+  });
+
   test("members-only pages send guests to sign in", async ({ page }) => {
     for (const path of ["/for-you", "/settings", "/admin"]) {
       await page.goto(path);

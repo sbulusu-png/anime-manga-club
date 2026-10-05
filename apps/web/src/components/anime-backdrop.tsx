@@ -1,9 +1,12 @@
 import type { CSSProperties } from "react";
 
+import { CharacterRails } from "./character-rails";
+
 /**
- * Fixed, decorative page backdrop: colour glows, manga halftone dots, faint speed lines
- * and a few drifting sakura petals. Pure CSS (see globals.css), no JavaScript; petals are
- * hidden for reduced motion. Sits behind everything and never takes clicks.
+ * Fixed, decorative page backdrop: popular characters in the margins (wide screens),
+ * colour glows, manga halftone dots, faint speed lines and a few drifting sakura petals.
+ * CSS (see globals.css) apart from the characters' scroll drift; motion stops for reduced
+ * motion. Sits behind everything and never takes clicks.
  */
 
 // Fixed positions so server and browser render the same thing.
@@ -21,6 +24,8 @@ const PETALS = [
 export function AnimeBackdrop() {
   return (
     <div aria-hidden="true" className="anime-backdrop">
+      {/* Characters first, under the glows; their veil keeps the content column plain. */}
+      <CharacterRails />
       <div className="anime-backdrop__glow" />
       <div className="anime-backdrop__speedlines" />
       <div className="anime-backdrop__halftone" />

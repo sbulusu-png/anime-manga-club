@@ -42,7 +42,8 @@ const JOINED = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric"
 export default async function ProfilePage({ params, searchParams }: Props) {
   const { username } = await params;
   const query = await searchParams;
-  const profile = await getProfile(username);
+  // Asked for together: neither waits on the other.
+  const [profile, me] = await Promise.all([getProfile(username), getCurrentUser()]);
   const { user, stats } = profile;
   const name = user.displayUsername ?? user.username;
   const base = `/u/${user.username}`;
@@ -52,7 +53,6 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const requestedStatus = param(query.status);
   const status = STATUSES.find((s) => s === requestedStatus) ?? null;
 
-  const me = await getCurrentUser();
   const viewer = viewerOf(me);
   const isMe = me?.username === user.username;
 

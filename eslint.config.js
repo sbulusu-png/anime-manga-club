@@ -12,7 +12,17 @@ const webFiles = ["apps/web/**/*.{ts,tsx}"];
 
 export default defineConfig(
   {
-    ignores: ["**/dist/**", "**/coverage/**", "**/.next/**", "**/next-env.d.ts", "design/**"],
+    // Generated output: builds, test reports and the code graph.
+    ignores: [
+      "**/dist/**",
+      "**/coverage/**",
+      "**/.next/**",
+      "**/next-env.d.ts",
+      "design/**",
+      "**/playwright-report/**",
+      "**/test-results/**",
+      "**/graphify-out/**",
+    ],
   },
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,
@@ -27,7 +37,11 @@ export default defineConfig(
     },
     rules: {
       "@typescript-eslint/consistent-type-imports": "error",
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      // Leaving keys out with a rest object ({ a, ...rest }) counts as using them.
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", ignoreRestSiblings: true },
+      ],
       "@typescript-eslint/restrict-template-expressions": ["error", { allowNumber: true }],
     },
   },

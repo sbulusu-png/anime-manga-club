@@ -48,6 +48,7 @@ const LOCAL = [
   }),
   anilistMedia(3, {
     title: { romaji: "Hagane no Renkinjutsushi", english: "Fullmetal Alchemist", native: null },
+    synonyms: ["FMA", "Full Metal Alchemist"],
     genres: ["Action", "Adventure", "Drama"],
     popularity: 800, // tie with Bleach: id breaks it
     averageScore: null, // unscored titles sort last
@@ -68,6 +69,7 @@ const LOCAL = [
   }),
   anilistMedia(5, {
     title: { romaji: "Meitantei Conan", english: "Case Closed", native: "名探偵コナン" },
+    synonyms: ["Detective Conan"],
     genres: ["Mystery", "Comedy"],
     popularity: 300,
     averageScore: 82,
@@ -201,6 +203,13 @@ describe("GET /api/media", () => {
     ["a romaji title, ignoring case", "MEITANTEI", ["Case Closed"]],
     ["a native title", "コナン", ["Case Closed"]],
     ["a literal % sign", "100%", ["100% Pascal-sensei"]],
+    ["a Japanese title with a word left out", "hagane renkinjutsushi", ["Fullmetal Alchemist"]],
+    ["a Japanese title with a macron", "Wan Pīsu", ["One Piece"]],
+    ["a long vowel spelled out", "wan piisu", ["One Piece"]],
+    ["words in any order", "conan meitantei", ["Case Closed"]],
+    ["an alternative name", "detective conan", ["Case Closed"]],
+    ["an abbreviation", "fma", ["Fullmetal Alchemist"]],
+    ["a small typo", "hagane no renkinjutsusi", ["Fullmetal Alchemist"]],
     ["nothing", "zzz-no-match", []],
   ])("searches %s", async (_name, q, expected) => {
     expect(titles(await listBody(`?q=${encodeURIComponent(q)}`))).toEqual(expected);

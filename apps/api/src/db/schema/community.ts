@@ -87,6 +87,8 @@ export const listEntries = pgTable(
     mediaId: mediaRef(),
     status: listStatus().notNull(),
     progress: integer().notNull().default(0), // episodes watched or chapters read
+    // The member's own 0-100 score, from a list they imported (AniList). A taste signal.
+    score: smallint(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -95,6 +97,7 @@ export const listEntries = pgTable(
     index().on(t.userId, t.status),
     index().on(t.mediaId),
     check("list_entries_progress_non_negative", sql`${t.progress} >= 0`),
+    check("list_entries_score_range", sql`${t.score} between 0 and 100`),
   ],
 );
 

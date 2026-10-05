@@ -51,19 +51,22 @@ const NUMBER = new Intl.NumberFormat("en");
 
 export default async function MediaPage({ params }: Props) {
   const { id } = await params;
-  const media = await getTitle(id);
-  const user = await getCurrentUser();
-  const viewer = viewerOf(user);
-  const mediaId = String(media.id);
-  const [reviews, similar, mine, entry] = await Promise.all([
-    apiGetAsViewer<Page<Review>>(`/api/reviews?mediaId=${mediaId}&sort=top&limit=6`, 30, [
-      TAGS.reviews,
-    ]),
-    apiGet<{ items: Recommendation[] }>(`/api/media/${mediaId}/similar?limit=6`, 600),
+  if (!/^\d{1,10}$/.test(id)) notFound();
+  // Everything here needs only the id, so it's all requested at once rather than in
+  // rounds (each round is a trip to the API and the database).
+  const userPromise = getCurrentUser();
+  const forMember = <T,>(path: `/api/${string}`) =>
+    userPromise.then((user) => (user ? apiGetAsViewer<T>(path) : null));
+  const [media, user, reviews, similar, mine, entry] = await Promise.all([
+    getTitle(id),
+    userPromise,
+    apiGetAsViewer<Page<Review>>(`/api/reviews?mediaId=${id}&sort=top&limit=6`, 30, [TAGS.reviews]),
+    apiGet<{ items: Recommendation[] }>(`/api/media/${id}/similar?limit=6`, 600),
     // The member's own review and list entry (only for signed-in members).
-    user ? apiGetAsViewer<{ item: Review | null }>(`/api/reviews/mine?mediaId=${mediaId}`) : null,
-    user ? apiGetAsViewer<{ item: ListEntry | null }>(`/api/list/${mediaId}`) : null,
+    forMember<{ item: Review | null }>(`/api/reviews/mine?mediaId=${id}`),
+    forMember<{ item: ListEntry | null }>(`/api/list/${id}`),
   ]);
+  const viewer = viewerOf(user);
 
   const season = labelOf(SEASONS, media.season);
   const facts: [string, string | null][] = [
@@ -129,7 +132,7 @@ export default async function MediaPage({ params }: Props) {
         <div className="flex min-w-0 flex-col gap-4 md:col-start-2 md:row-start-1 md:self-end">
           <header className="flex flex-col gap-2">
             <p className="text-sm font-bold uppercase tracking-widest text-accent-text">
-              {media.type === "anime" ? "Anime" : "Manga"}
+              {{ anime: "Anime", manga: "Manga", manhwa: "Manhwa", manhua: "Manhua" }[media.kind]}
             </p>
             <h1 className="font-display text-4xl leading-none tracking-wide sm:text-6xl">
               {media.title.display}
@@ -166,12 +169,21 @@ export default async function MediaPage({ params }: Props) {
           <ListControl
             mediaId={media.id}
             type={media.type}
-            total={media.type === "anime" ? media.episodes : media.chapters}
             initial={entry?.item ?? null}
             viewer={viewer}
           />
 
-          <ClubVerdict club={media.club} />
+          <section aria-labelledby="your-verdict-heading" className="flex flex-col gap-3">
+            <h2 id="your-verdict-heading" className="text-lg font-bold">
+              Your verdict
+            </h2>
+            <ReviewEditor
+              mediaId={media.id}
+              mediaTitle={media.title.display}
+              initial={mine?.item ?? null}
+              viewer={viewer}
+            />
+          </section>
 
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-2xl border border-border bg-surface p-4 text-sm md:grid-cols-1">
             {facts
@@ -207,17 +219,7 @@ export default async function MediaPage({ params }: Props) {
             )}
           </section>
 
-          <section aria-labelledby="your-verdict-heading" className="flex flex-col gap-3">
-            <h2 id="your-verdict-heading" className="text-xl font-bold">
-              Your verdict
-            </h2>
-            <ReviewEditor
-              mediaId={media.id}
-              mediaTitle={media.title.display}
-              initial={mine?.item ?? null}
-              viewer={viewer}
-            />
-          </section>
+          <ClubVerdict club={media.club} wide />
 
           {media.tags.length > 0 && (
             <section aria-labelledby="tags-heading" className="flex flex-col gap-2">

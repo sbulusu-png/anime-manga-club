@@ -50,6 +50,27 @@
       "when": 1790569359211,
       "tag": "0006_drop_planning_status",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790781655582,
+      "tag": "0007_list_scores",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790782089728,
+      "tag": "0008_title_search_synonyms",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791187873677,
+      "tag": "0009_media_country",
+      "breakpoints": true
     }
   ]
 }

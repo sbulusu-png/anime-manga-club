@@ -27,7 +27,14 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     // next-themes sets the theme class before React hydrates, hence the warning suppression.
-    <html lang="en" suppressHydrationWarning className={`${bangers.variable} ${inter.variable}`}>
+    // data-scroll-behavior: Next.js turns our smooth scrolling off while it moves to the
+    // top of a new page, so you land at the start of it, not wherever the last page was.
+    <html
+      lang="en"
+      suppressHydrationWarning
+      data-scroll-behavior="smooth"
+      className={`${bangers.variable} ${inter.variable}`}
+    >
       <body className="flex min-h-dvh flex-col bg-bg font-sans text-ink antialiased">
         <AnimeBackdrop />
         <Providers>

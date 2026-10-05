@@ -1,4 +1,16 @@
-import { type SQL, and, arrayContains, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import {
+  type SQL,
+  and,
+  arrayContains,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  ilike,
+  inArray,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import type { Db } from "../db/client.js";
 import { media, reviews } from "../db/schema/index.js";
@@ -6,9 +18,45 @@ import { type AnilistClient, type Character, toMediaRow } from "../lib/anilist.j
 import { type Cursor, decodeCursor, encodeCursor } from "../lib/cursor.js";
 import { AppError } from "../lib/errors.js";
 import { RATINGS, type Rating, valueToRating } from "../lib/rating.js";
+import { titleKey } from "../lib/title-key.js";
 import { TtlCache } from "../lib/ttl-cache.js";
 
 export type MediaRow = typeof media.$inferSelect;
+
+/**
+ * What a title is, as readers say it: AniList files Korean manhwa and Chinese manhua
+ * under MANGA, so the country of origin tells them apart.
+ */
+export const MEDIA_KINDS = ["anime", "manga", "manhwa", "manhua"] as const;
+export type MediaKind = (typeof MEDIA_KINDS)[number];
+const MANHUA_COUNTRIES = ["CN", "TW", "HK"];
+
+export function kindOf(row: Pick<MediaRow, "type" | "country">): MediaKind {
+  if (row.type === "anime") return "anime";
+  if (row.country === "KR") return "manhwa";
+  if (row.country && MANHUA_COUNTRIES.includes(row.country)) return "manhua";
+  return "manga";
+}
+
+/** SQL for one kind; "manga" means Japanese (or unknown origin) comics only. */
+function kindCondition(kind: MediaKind): SQL {
+  switch (kind) {
+    case "anime":
+      return sql`${media.type} = 'anime'`;
+    case "manhwa":
+      return sql`${media.type} = 'manga' and ${media.country} = 'KR'`;
+    case "manhua":
+      return sql`${media.type} = 'manga' and ${media.country} in ('CN', 'TW', 'HK')`;
+    case "manga":
+      return sql`${media.type} = 'manga' and coalesce(${media.country}, 'JP') not in ('KR', 'CN', 'TW', 'HK')`;
+  }
+}
+
+// Lists of titles only show cards, so they skip the long text columns: half the bytes
+// (and about half the query time) for a page of results or 300 suggestion candidates.
+const { synopsis, searchKey, synonyms, ...cardColumns } = getTableColumns(media);
+export const CARD_COLUMNS = cardColumns;
+export type CardRow = Omit<MediaRow, "synopsis" | "searchKey" | "synonyms">;
 export const MEDIA_SORTS = ["popularity", "score", "club", "newest", "title"] as const;
 export type MediaSort = (typeof MEDIA_SORTS)[number];
 
@@ -16,7 +64,7 @@ export type MediaSort = (typeof MEDIA_SORTS)[number];
 export const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface ListMediaParams {
-  type?: "anime" | "manga" | undefined;
+  type?: MediaKind | undefined;
   q?: string | undefined;
   genres?: string[] | undefined;
   tags?: string[] | undefined;
@@ -59,14 +107,24 @@ export async function listMedia(db: Db, params: ListMediaParams) {
   const sort = SORTS[params.sort];
   const conditions: (SQL | undefined)[] = [eq(media.isAdult, false)];
 
-  if (params.type) conditions.push(eq(media.type, params.type));
+  if (params.type) conditions.push(kindCondition(params.type));
   if (params.q) {
     const pattern = likeContains(params.q);
+    const key = titleKey(params.q);
+    const words = key.split(" ").filter(Boolean);
     conditions.push(
       or(
         ilike(media.titleRomaji, pattern),
         ilike(media.titleEnglish, pattern),
         ilike(media.titleNative, pattern),
+        // English, Japanese (in English letters or not) and alternative names, spelled
+        // loosely: every word found, in any order ("shingeki kyojin")...
+        words.length > 0
+          ? and(...words.map((word) => ilike(media.searchKey, likeContains(word))))
+          : undefined,
+        // ...or close enough to forgive a typo ("shingeky no kyojin"). Short queries
+        // match too much this way, so they rely on the exact matches above.
+        key.length >= 5 ? sql`${key} <% ${media.searchKey}` : undefined,
       ),
     );
   }
@@ -93,7 +151,7 @@ export async function listMedia(db: Db, params: ListMediaParams) {
 
   const order = sort.direction === "desc" ? desc : asc;
   const rows = await db
-    .select({ row: media, sortValue: sort.expr })
+    .select({ row: CARD_COLUMNS, sortValue: sort.expr })
     .from(media)
     .where(and(...conditions))
     .orderBy(order(sort.expr), order(media.id))
@@ -142,10 +200,13 @@ export async function upsertMedia(
         malId: sql`excluded.mal_id`,
         type: sql`excluded.type`,
         format: sql`excluded.format`,
+        country: sql`excluded.country`,
         status: sql`excluded.status`,
         titleRomaji: sql`excluded.title_romaji`,
         titleEnglish: sql`excluded.title_english`,
         titleNative: sql`excluded.title_native`,
+        synonyms: sql`excluded.synonyms`,
+        searchKey: sql`excluded.search_key`,
         synopsis: sql`excluded.synopsis`,
         coverImageUrl: sql`excluded.cover_image_url`,
         coverColor: sql`excluded.cover_color`,
@@ -246,11 +307,12 @@ export async function getCharacters(anilist: AnilistClient, anilistId: number) {
 }
 
 /** Public JSON for a title in lists. */
-export function toMediaSummary(row: MediaRow) {
+export function toMediaSummary(row: CardRow) {
   return {
     id: row.id,
     anilistId: row.anilistId,
     type: row.type,
+    kind: kindOf(row),
     format: row.format,
     status: row.status,
     title: {
