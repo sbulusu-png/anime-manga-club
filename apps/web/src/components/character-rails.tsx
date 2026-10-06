@@ -2,7 +2,6 @@
 
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import Image from "next/image";
 import { useRef } from "react";
 
 gsap.registerPlugin(useGSAP);
@@ -55,13 +54,35 @@ function Rail({ side, images }: { side: "left" | "right"; images: string[] }) {
             className="character-rail__panel"
             style={{ rotate: `${String((i % 2 === 0 ? -1 : 1) * (side === "left" ? 3 : -3))}deg` }}
           >
-            <Image src={src} alt="" fill sizes="176px" className="object-cover object-top" />
+            <picture>
+              {/* Only screens wide enough to show the characters fetch them; smaller ones
+                  get the blank fallback. The first few on each side load straight away,
+                  as on short pages they're the largest thing on screen. */}
+              <source
+                media="(min-width: 1280px)"
+                srcSet={`${optimised(src, 256)} 1x, ${optimised(src, 384)} 2x`}
+              />
+              <img
+                src={BLANK}
+                alt=""
+                loading={i < 3 ? "eager" : "lazy"}
+                decoding="async"
+                className="absolute inset-0 size-full object-cover object-top"
+              />
+            </picture>
           </div>
         ))}
       </div>
     </div>
   );
 }
+
+/** A 1x1 transparent GIF: what narrow screens get instead of the characters. */
+const BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+/** The same resized, re-encoded copy next/image would serve (AVIF/WebP, cached). */
+const optimised = (src: string, width: number) =>
+  `/_next/image?url=${encodeURIComponent(src)}&w=${String(width)}&q=75`;
 
 /** How far the characters drift for each pixel scrolled. */
 const DRIFT = 0.4;

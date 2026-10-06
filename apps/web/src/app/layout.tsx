@@ -12,6 +12,11 @@ import "./globals.css";
 const bangers = Bangers({ weight: "400", subsets: ["latin"], variable: "--font-bangers" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
+// Every page depends on who's signed in (the header reads the session cookie), so
+// they're all rendered per request. Saying so up front stops the build from trying to
+// pre-render them, which fired API calls at build time and logged "API unreachable".
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: { default: "Anime Manga Club", template: "%s · Anime Manga Club" },
   description: "Reviews, suggestions and debates from our anime and manga club.",
