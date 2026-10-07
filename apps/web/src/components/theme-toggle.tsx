@@ -1,25 +1,43 @@
 "use client";
 
-import { useTheme } from "next-themes";
+import { useSyncExternalStore } from "react";
 
-import { useHasMounted } from "@/lib/use-has-mounted";
+import { applyTheme } from "@/lib/theme";
+
+const DARK_DEVICE = "(prefers-color-scheme: dark)";
+
+/** Re-checks when the theme class changes or the device switches light/dark. */
+function subscribe(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  const media = window.matchMedia(DARK_DEVICE);
+  media.addEventListener("change", onChange);
+  return () => {
+    observer.disconnect();
+    media.removeEventListener("change", onChange);
+  };
+}
+
+/** Dark if the member chose it, or hasn't chosen and the device is dark. */
+function isDarkNow() {
+  const root = document.documentElement.classList;
+  if (root.contains("dark")) return true;
+  if (root.contains("light")) return false;
+  return window.matchMedia(DARK_DEVICE).matches;
+}
 
 /** Light/dark switch: shows the moon in light mode and the sun in dark mode. */
 export function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme();
-  const mounted = useHasMounted();
-  const isDark = resolvedTheme === "dark";
-  const label = !mounted
-    ? "Switch theme"
-    : isDark
-      ? "Switch to light theme"
-      : "Switch to dark theme";
+  // null on the server: the device's setting is only known in the browser.
+  const isDark = useSyncExternalStore<boolean | null>(subscribe, isDarkNow, () => null);
+  const label =
+    isDark === null ? "Switch theme" : isDark ? "Switch to light theme" : "Switch to dark theme";
 
   return (
     <button
       type="button"
       onClick={() => {
-        setTheme(isDark ? "light" : "dark");
+        applyTheme(isDarkNow() ? "light" : "dark");
       }}
       aria-label={label}
       title={label}

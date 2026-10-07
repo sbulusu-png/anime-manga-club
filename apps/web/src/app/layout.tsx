@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Bangers, Inter } from "next/font/google";
+import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 
 import { AnimeBackdrop } from "@/components/anime-backdrop";
-import { Providers } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { THEME_COOKIE, isTheme } from "@/lib/theme";
 
 import "./globals.css";
 
@@ -29,29 +30,27 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // A member's light/dark choice (lib/theme.ts); without one, CSS follows the device.
+  const theme = (await cookies()).get(THEME_COOKIE)?.value;
   return (
-    // next-themes sets the theme class before React hydrates, hence the warning suppression.
     // data-scroll-behavior: Next.js turns our smooth scrolling off while it moves to the
     // top of a new page, so you land at the start of it, not wherever the last page was.
     <html
       lang="en"
-      suppressHydrationWarning
       data-scroll-behavior="smooth"
-      className={`${bangers.variable} ${inter.variable}`}
+      className={`${bangers.variable} ${inter.variable} ${isTheme(theme) ? theme : ""}`}
     >
       <body className="flex min-h-dvh flex-col bg-bg font-sans text-ink antialiased">
         <AnimeBackdrop />
-        <Providers>
-          <a href="#main" className="skip-link">
-            Skip to content
-          </a>
-          <SiteHeader />
-          <main id="main" className="flex-1">
-            {children}
-          </main>
-          <SiteFooter />
-        </Providers>
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
+        <SiteHeader />
+        <main id="main" className="flex-1">
+          {children}
+        </main>
+        <SiteFooter />
       </body>
     </html>
   );

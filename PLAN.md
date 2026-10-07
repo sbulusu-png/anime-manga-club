@@ -170,7 +170,9 @@ Installed Claude plugins used: **gsap-skills** (all frontend motion), **graphify
 - Manhwa and manhua have their own place: titles store AniList's country of origin (migration 0009), so Browse has Manga (Japan), Manhwa (Korea) and Manhua (China/Taiwan) tabs, the home page a shelf for each, and cards and title pages say which it is. The seed now loads the 50 most popular of each (catalog: 219 titles)
 - Background characters: 26 favourites (13 a side) on an endless loop, drifting up at 40% of the scroll whatever the page height (so Browse loading more never pulls them backward); jumps of more than a screen (a new page, Home/End) are absorbed so they never rewind. GSAP `quickTo` with a wrap modifier, no ScrollTrigger
 - Manga look across the site: covers and cards are inked "manga panels" with hard offset shadows (red in dark mode) that jump out on hover with speed lines; AniList scores are starburst stickers; review cards are speech bubbles; main buttons are comic buttons that press down; page and section titles are anime title cards (red offset shadow, brush stroke, a big faint Japanese/Korean/Chinese watermark drawn by CSS so it stays decoration); アニメ漫画クラブ under the logo. Text colours unchanged, so contrast holds (axe scans pass)
-- Checks: 290 API tests, 26 e2e tests, lint, format and types clean; both apps build
+- Theme without a script: colours use CSS light-dark() and follow the device until a member picks one; the choice is a cookie the server turns into .light/.dark on <html>, so pages arrive in the right theme with nothing to run first (no flash, and no React "script tag" warning on 404s). next-themes removed. A missing title is a 404 from the page itself; its tab says "Title not found"
+- Security: sharp 0.35.5 (librsvg advisory), shell-quote 1.12.0 under concurrently (npm override); source-map-js patched. Left: the braces chain inside @next/eslint-plugin-next (no patched braces exists yet; lint-only)
+- Checks: 290 API tests, 27 e2e tests, lint, format and types clean; both apps build
 
 Later (only when asked):
 

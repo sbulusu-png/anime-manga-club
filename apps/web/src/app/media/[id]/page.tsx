@@ -20,19 +20,21 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
-// One request per page render, shared by generateMetadata and the page.
+// One request per page render, shared by generateMetadata and the page. Null when there's
+// no such title: only the page itself calls notFound(). Metadata is streamed after the
+// page has started, so throwing there made the browser re-render the whole layout.
 const getTitle = cache(async (id: string) => {
-  if (!/^\d{1,10}$/.test(id)) notFound();
+  if (!/^\d{1,10}$/.test(id)) return null;
   const data = await apiGet<{ item: MediaDetail }>(`/api/media/${id}`, 300, [
     TAGS.title(id),
     TAGS.allTitles,
   ]);
-  if (!data) notFound();
-  return data.item;
+  return data?.item ?? null;
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const media = await getTitle((await params).id);
+  if (!media) return { title: "Title not found" };
   const description = media.synopsis ? `${media.synopsis.slice(0, 155).trimEnd()}…` : undefined;
   return {
     title: media.title.display,
@@ -67,6 +69,7 @@ export default async function MediaPage({ params }: Props) {
     forMember<{ item: Review | null }>(`/api/reviews/mine?mediaId=${id}`),
     forMember<{ item: ListEntry | null }>(`/api/list/${id}`),
   ]);
+  if (!media) notFound();
   const viewer = viewerOf(user);
 
   const season = labelOf(SEASONS, media.season);

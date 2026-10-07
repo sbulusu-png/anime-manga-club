@@ -1,7 +1,16 @@
 @import "tailwindcss";
 
-/* next-themes puts .dark on <html>; `dark:` utilities follow it, not the OS setting. */
-@custom-variant dark (&:where(.dark, .dark *));
+/* `dark:` utilities: a member's own dark choice, or the device's when they haven't picked. */
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not(.light), :root:not(.light) *) {
+      @slot;
+    }
+  }
+}
 
 /*
  * Design tokens. Every text/background pair meets WCAG AA (4.5:1) in both themes,
@@ -10,88 +19,71 @@
  * in dark mode no single red can do both.
  */
 :root {
-  color-scheme: light;
-  --bg: #f7f5ff;
-  --surface: #ffffff;
-  --surface-2: #efeafc;
-  --ink: #1b1830;
-  --muted: #5d5878;
-  --border: #dcd6ee;
+  /* Follows the device until a member picks a theme (then <html> has .light or .dark).
+     Each colour is light-dark(light value, dark value). */
+  color-scheme: light dark;
+  --bg: light-dark(#f7f5ff, #0b0a10);
+  --surface: light-dark(#ffffff, #15131e);
+  --surface-2: light-dark(#efeafc, #1e1b2b);
+  --ink: light-dark(#1b1830, #f5f3ff);
+  --muted: light-dark(#5d5878, #a9a3c2);
+  --border: light-dark(#dcd6ee, #2c2840);
   --accent: #d62839;
   --accent-ink: #ffffff;
-  --accent-text: #b91c2c;
-  --accent-soft: #fde4e6;
-  --link: #2451c4;
-  --focus: #2f6fed;
-  --shadow: 0 1px 2px rgb(27 24 48 / 0.06), 0 8px 24px rgb(27 24 48 / 0.08);
+  --accent-text: light-dark(#b91c2c, #ff6b76);
+  --accent-soft: light-dark(#fde4e6, #3a1419);
+  --link: light-dark(#2451c4, #8fb0ff);
+  --focus: light-dark(#2f6fed, #8fb0ff);
+  --shadow:
+    0 1px 2px light-dark(rgb(27 24 48 / 0.06), rgb(0 0 0 / 0.4)),
+    0 8px 24px light-dark(rgb(27 24 48 / 0.08), rgb(0 0 0 / 0.35));
   /* Verdicts: text colour, and a soft fill for badges and bars. */
-  --verdict-skip: #545d6b;
-  --verdict-skip-soft: #eceef2;
-  --verdict-timepass: #8a4f00;
-  --verdict-timepass-soft: #fcefd6;
-  --verdict-go: #146c36;
-  --verdict-go-soft: #dff3e6;
-  --verdict-perfect: #6b2fd6;
-  --verdict-perfect-soft: #efe7fe;
+  --verdict-skip: light-dark(#545d6b, #b3bac6);
+  --verdict-skip-soft: light-dark(#eceef2, #262a32);
+  --verdict-timepass: light-dark(#8a4f00, #f4b64a);
+  --verdict-timepass-soft: light-dark(#fcefd6, #33270f);
+  --verdict-go: light-dark(#146c36, #5fd68f);
+  --verdict-go-soft: light-dark(#dff3e6, #102e1d);
+  --verdict-perfect: light-dark(#6b2fd6, #c6a8ff);
+  --verdict-perfect-soft: light-dark(#efe7fe, #2a1f47);
   /*
    * Backdrop (decorative, behind content). Strengths are measured: even where the
    * strongest glow, a speed line and a halftone dot overlap, muted, red and link text
    * stay at 4.5:1 or better (light worst 4.54:1, dark 4.77:1).
    */
-  --glow-1: rgb(255 158 196 / 0.24); /* sakura */
-  --glow-2: rgb(140 196 255 / 0.22); /* sky */
-  --glow-3: rgb(196 168 255 / 0.2); /* lavender */
-  --halftone: rgb(214 40 57 / 0.05);
-  --speedline: rgb(27 24 48 / 0.035);
-  --petal-1: #ffc2d6;
-  --petal-2: #ff8fb3;
+  --glow-1: light-dark(rgb(255 158 196 / 0.24), rgb(214 40 57 / 0.2)); /* sakura / crimson neon */
+  --glow-2: light-dark(rgb(140 196 255 / 0.22), rgb(124 77 255 / 0.2)); /* sky / violet */
+  --glow-3: light-dark(rgb(196 168 255 / 0.2), rgb(56 110 255 / 0.13)); /* lavender / night blue */
+  --halftone: light-dark(rgb(214 40 57 / 0.05), rgb(255 255 255 / 0.055));
+  --speedline: light-dark(rgb(27 24 48 / 0.035), rgb(255 255 255 / 0.03));
+  --petal-1: light-dark(#ffc2d6, #ffb3cc);
+  --petal-2: light-dark(#ff8fb3, #e0527f);
   --petal-opacity: 0.75;
   --rail-opacity: 0.32;
   /* Manga panels: inked borders and hard, offset "comic" shadows. */
-  --panel-border: #1b1830;
-  --panel-shadow: #1b1830;
-  --panel-shadow-hover: #d62839;
+  --panel-border: light-dark(#1b1830, rgb(245 243 255 / 0.28));
+  --panel-shadow: light-dark(#1b1830, rgb(214 40 57 / 0.7));
+  --panel-shadow-hover: light-dark(#d62839, #ff6b76);
   --heading-shadow: #d62839;
-  --watermark: rgb(27 24 48 / 0.07);
+  --watermark: light-dark(rgb(27 24 48 / 0.07), rgb(245 243 255 / 0.06));
 }
 
-.dark {
+/* A member's own choice, set on <html> by the server from their theme cookie. */
+:root.light {
+  color-scheme: light;
+}
+:root.dark {
   color-scheme: dark;
-  --bg: #0b0a10;
-  --surface: #15131e;
-  --surface-2: #1e1b2b;
-  --ink: #f5f3ff;
-  --muted: #a9a3c2;
-  --border: #2c2840;
-  --accent: #d62839;
-  --accent-ink: #ffffff;
-  --accent-text: #ff6b76;
-  --accent-soft: #3a1419;
-  --link: #8fb0ff;
-  --focus: #8fb0ff;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
-  --verdict-skip: #b3bac6;
-  --verdict-skip-soft: #262a32;
-  --verdict-timepass: #f4b64a;
-  --verdict-timepass-soft: #33270f;
-  --verdict-go: #5fd68f;
-  --verdict-go-soft: #102e1d;
-  --verdict-perfect: #c6a8ff;
-  --verdict-perfect-soft: #2a1f47;
-  --glow-1: rgb(214 40 57 / 0.2); /* crimson neon */
-  --glow-2: rgb(124 77 255 / 0.2); /* violet */
-  --glow-3: rgb(56 110 255 / 0.13); /* night blue */
-  --halftone: rgb(255 255 255 / 0.055);
-  --speedline: rgb(255 255 255 / 0.03);
-  --petal-1: #ffb3cc;
-  --petal-2: #e0527f;
+  /* The few values that aren't colours (and so can't use light-dark()). */
   --petal-opacity: 0.4;
   --rail-opacity: 0.38;
-  --panel-border: rgb(245 243 255 / 0.28);
-  --panel-shadow: rgb(214 40 57 / 0.7);
-  --panel-shadow-hover: #ff6b76;
-  --heading-shadow: #d62839;
-  --watermark: rgb(245 243 255 / 0.06);
+}
+/* The same, when no theme is picked and the device is in dark mode. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --petal-opacity: 0.4;
+    --rail-opacity: 0.38;
+  }
 }
 
 @theme inline {
