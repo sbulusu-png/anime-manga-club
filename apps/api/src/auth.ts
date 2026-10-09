@@ -162,6 +162,11 @@ export function createAuth(options: AuthOptions) {
     timeZoneName: "short",
   });
 
+  /** Signs a session out by deleting it (its code, if any, goes with it). */
+  async function endSession(sessionId: string) {
+    await db.delete(sessions).where(eq(sessions.id, sessionId));
+  }
+
   /**
    * Emails a fresh code for this sign-in. `google` says how they signed in, for the
    * "not you?" advice; when unknown (a resend), it's Google only if they have no password.
@@ -326,6 +331,11 @@ export function createAuth(options: AuthOptions) {
         // Until the sign-in code is entered, the session can't change anything.
         if (!openBeforeCode(ctx.path)) {
           const current = await getSessionFromCtx(ctx);
+          // Sessions from before the email rule (or before a domain was removed) end here.
+          if (current && !allowedEmail(current.user.email)) {
+            await endSession(current.session.id);
+            throw emailNotAllowed();
+          }
           if (current && !current.session.signInCodeVerifiedAt) {
             throw APIError.from("FORBIDDEN", {
               code: "SIGN_IN_CODE_REQUIRED",
@@ -387,7 +397,7 @@ export function createAuth(options: AuthOptions) {
       openAPI({ disableDefaultReference: true }),
     ],
   });
-  return Object.assign(auth, { sendSignInCode });
+  return Object.assign(auth, { sendSignInCode, allowedEmail, endSession });
 }
 
 interface SignInSession {

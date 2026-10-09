@@ -123,6 +123,36 @@ describe("university emails only", () => {
   });
 });
 
+describe("sessions from before the rule", () => {
+  it("are signed out, whether or not their code was entered", async () => {
+    // Signed in (and past the code) while example.com was allowed; production doesn't allow it.
+    const { cookie } = await createMember(app, "Grandfathered");
+    expect((await send(app, "GET", "/api/me", { cookie })).status).toBe(200);
+
+    const rename = await post(
+      universityOnly,
+      "/api/auth/update-user",
+      { name: "Still here" },
+      cookie,
+    );
+    expect(rename.status).toBe(400);
+    expect(((await rename.json()) as { code: string }).code).toBe("EMAIL_NOT_ALLOWED");
+    // The session is gone for good, even where the address is allowed.
+    expect((await send(app, "GET", "/api/me", { cookie })).status).toBe(401);
+  });
+
+  it("can't ask for or enter a sign-in code", async () => {
+    const { email } = await createMember(app, "HalfwayThere");
+    const cookie = await signIn(email);
+
+    const code = await send(universityOnly, "GET", "/api/sign-in-code", { cookie });
+    expect(code.status).toBe(401);
+    const me = await send(universityOnly, "GET", "/api/me", { cookie });
+    expect(await errorCode(me)).toBe("UNAUTHENTICATED");
+    expect((await enterSignInCode(app, cookie, email)).status).toBe(401);
+  });
+});
+
 describe("the sign-in code", () => {
   it("is needed after every sign-in, including after signing out", async () => {
     const { email } = await createMember(app, "Rin");

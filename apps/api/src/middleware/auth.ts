@@ -7,10 +7,15 @@ import type { AppEnv } from "../types.js";
 /**
  * Loads the signed-in user (or null) for every request. A sign-in still waiting for its
  * emailed code counts as signed out everywhere, except the routes that take the code.
+ * A session whose email isn't allowed (one from before the rule) is ended on the spot.
  */
 export function loadSession(auth: Auth) {
   return createMiddleware<AppEnv>(async (c, next) => {
-    const result = await auth.api.getSession({ headers: c.req.raw.headers });
+    let result = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (result && !auth.allowedEmail(result.user.email)) {
+      await auth.endSession(result.session.id);
+      result = null;
+    }
     const verified = Boolean(result?.session.signInCodeVerifiedAt);
     c.set("user", verified ? (result?.user ?? null) : null);
     c.set("session", verified ? (result?.session ?? null) : null);
