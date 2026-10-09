@@ -1,4 +1,4 @@
-import { type SQL, and, desc, eq, sql } from "drizzle-orm";
+import { type SQL, and, desc, eq, inArray, sql } from "drizzle-orm";
 
 import type { Db } from "../db/client.js";
 import { listEntries, listStatus, media, users } from "../db/schema/index.js";
@@ -237,4 +237,32 @@ export async function importFromAnilist(
       });
   }
   return summary;
+}
+
+/**
+ * Adds several titles to a member's list at once (a typed list). Adult or unknown titles
+ * are skipped; titles already on the list take the new status.
+ */
+export async function addManyToList(
+  db: Db,
+  userId: string,
+  items: { mediaId: number; status: ListStatus }[],
+) {
+  const wanted = new Map(items.map((item) => [item.mediaId, item.status]));
+  if (wanted.size === 0) return { saved: 0 };
+  const visible = await db
+    .select({ id: media.id })
+    .from(media)
+    .where(and(inArray(media.id, [...wanted.keys()]), eq(media.isAdult, false)));
+  if (visible.length === 0) return { saved: 0 };
+  await db
+    .insert(listEntries)
+    .values(
+      visible.map(({ id }) => ({ userId, mediaId: id, status: wanted.get(id) ?? "completed" })),
+    )
+    .onConflictDoUpdate({
+      target: [listEntries.userId, listEntries.mediaId],
+      set: { status: sql`excluded.status`, updatedAt: sql`now()` },
+    });
+  return { saved: visible.length };
 }

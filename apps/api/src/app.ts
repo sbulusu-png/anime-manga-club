@@ -26,6 +26,7 @@ import { mediaRoutes } from "./routes/media.js";
 import { meRoutes } from "./routes/me.js";
 import { recommendationRoutes } from "./routes/recommendations.js";
 import { reviewRoutes } from "./routes/reviews.js";
+import { signInCodeRoutes } from "./routes/sign-in-code.js";
 import { userRoutes } from "./routes/users.js";
 import type { AppEnv } from "./types.js";
 
@@ -101,6 +102,7 @@ export function createApp(deps: AppDeps) {
   app.route("/api/health", healthRoutes(pingDatabase));
   app.use("/api/*", loadSession(auth));
   app.route("/api/me", meRoutes);
+  app.route("/api/sign-in-code", signInCodeRoutes({ db, auth, isTrustedProxy }));
   app.route("/api/media", mediaRoutes({ db, anilist, isTrustedProxy }));
   app.route("/api/reviews", reviewRoutes({ db, isTrustedProxy }));
   app.route("/api/list", listRoutes({ db, anilist, isTrustedProxy }));

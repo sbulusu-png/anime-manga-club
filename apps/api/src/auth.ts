@@ -1,6 +1,7 @@
 import { APIError, betterAuth } from "better-auth";
 import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { and, eq } from "drizzle-orm";
 import {
   admin,
   haveIBeenPwned,
@@ -9,6 +10,7 @@ import {
   username,
 } from "better-auth/plugins";
 
+import type { Db } from "./db/client.js";
 import { accounts, sessions, users, verifications } from "./db/schema/index.js";
 import { CLIENT_IP_HEADER } from "./lib/client-ip.js";
 import {
@@ -16,15 +18,15 @@ import {
   type Mailer,
   existingAccountEmail,
   passwordResetEmail,
-  signInAlertEmail,
+  signInCodeEmail,
   verificationEmail,
 } from "./lib/email.js";
+import { emailNotAllowedMessage, isAllowedEmail } from "./lib/email-domains.js";
+import { issueSignInCode } from "./services/sign-in-codes.js";
 import { describeDevice } from "./lib/user-agent.js";
 
-type DrizzleDb = Parameters<typeof drizzleAdapter>[0];
-
 export interface AuthOptions {
-  db: DrizzleDb;
+  db: Db;
   /** Public origin users see, e.g. http://localhost:3000. OAuth callbacks go here. */
   baseURL: string;
   secret: string;
@@ -40,6 +42,8 @@ export interface AuthOptions {
   checkBreachedPasswords: boolean;
   /** IANA time zone for times in emails, e.g. "Asia/Kolkata". */
   timeZone: string;
+  /** Only emails at these domains (or their subdomains) can sign up or sign in. */
+  allowedEmailDomains: readonly string[];
 }
 
 const BREACHED_PASSWORD_MESSAGE =
@@ -81,11 +85,48 @@ async function confirmAccountDeletion(ctx: HookContext) {
   }
 }
 
-/** Sign-ins that trigger a "new sign-in" email: passwords, usernames and Google. */
-const SIGN_IN_PATHS = new Set(["/sign-in/email", "/sign-in/username"]);
-const isOAuthCallback = (path: string) => path.startsWith("/callback/");
-// A first Google sign-in is really a sign-up; the member knows they just did that.
-const NEW_ACCOUNT_MS = 60_000;
+/** Endpoints that take an email address, and the field it's in. */
+const EMAIL_FIELDS: Record<string, string> = {
+  "/sign-up/email": "email",
+  "/sign-in/email": "email",
+  "/request-password-reset": "email",
+  "/send-verification-email": "email",
+  "/change-email": "newEmail",
+  "/admin/create-user": "email",
+};
+
+/**
+ * What a session still waiting for its sign-in code may do: see who it belongs to, sign
+ * out, or start over (sign in again, reset a password, confirm an email).
+ */
+const OPEN_BEFORE_CODE = [
+  "/get-session",
+  "/sign-out",
+  "/sign-in",
+  "/sign-up",
+  "/callback",
+  "/verify-email",
+  "/send-verification-email",
+  "/request-password-reset",
+  "/reset-password",
+  "/is-username-available",
+  "/error",
+  "/ok",
+];
+const openBeforeCode = (path: string) =>
+  OPEN_BEFORE_CODE.some((open) => path === open || path.startsWith(`${open}/`));
+
+/**
+ * Sign-ins that don't need a code: opening the confirmation link already proved the
+ * member owns the inbox, and a club lead "viewing as" someone already entered theirs.
+ */
+const provenByPath = (path: string | undefined) =>
+  path === "/verify-email" || Boolean(path?.startsWith("/admin/impersonate"));
+
+const bodyField = (body: unknown, field: string): unknown =>
+  body && typeof body === "object" && field in body
+    ? (body as Record<string, unknown>)[field]
+    : null;
 
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 128;
@@ -93,6 +134,14 @@ export const USERNAME_MIN = 3;
 export const USERNAME_MAX = 20;
 
 export function createAuth(options: AuthOptions) {
+  const { db } = options;
+  const allowedEmail = (email: string) => isAllowedEmail(email, options.allowedEmailDomains);
+  const emailNotAllowed = () =>
+    APIError.from("BAD_REQUEST", {
+      code: "EMAIL_NOT_ALLOWED",
+      message: emailNotAllowedMessage(options.allowedEmailDomains),
+    });
+
   // Fire-and-forget: waiting on the email provider would make responses slower when an
   // email is sent, which would leak whether an address is registered.
   const send = (email: Email) => {
@@ -113,13 +162,50 @@ export function createAuth(options: AuthOptions) {
     timeZoneName: "short",
   });
 
-  return betterAuth({
+  /**
+   * Emails a fresh code for this sign-in. `google` says how they signed in, for the
+   * "not you?" advice; when unknown (a resend), it's Google only if they have no password.
+   */
+  async function sendSignInCode(
+    session: SignInSession,
+    { google, resend = false }: { google?: boolean; resend?: boolean } = {},
+  ) {
+    const [user] = await db
+      .select({ email: users.email, name: users.name })
+      .from(users)
+      .where(eq(users.id, session.userId));
+    if (!user) return;
+    const code = await issueSignInCode(db, session.id, { resend });
+    const viaGoogle =
+      google ??
+      !(await db
+        .select({ id: accounts.id })
+        .from(accounts)
+        .where(and(eq(accounts.userId, session.userId), eq(accounts.providerId, "credential")))
+        .then((rows) => rows.length > 0));
+    await send(
+      signInCodeEmail(
+        user.email,
+        user.name,
+        code,
+        {
+          when: formatTime.format(new Date(session.createdAt)),
+          device: describeDevice(session.userAgent),
+          ipAddress: session.ipAddress ?? null,
+          method: viaGoogle ? "google" : "password",
+        },
+        `${options.baseURL}/forgot-password`,
+      ),
+    );
+  }
+
+  const auth = betterAuth({
     appName: "Anime Manga Club",
     baseURL: options.baseURL,
     basePath: "/api/auth",
     secret: options.secret,
     trustedOrigins: options.trustedOrigins,
-    database: drizzleAdapter(options.db, {
+    database: drizzleAdapter(db, {
       provider: "pg",
       usePlural: true,
       schema: { users, sessions, accounts, verifications },
@@ -160,6 +246,15 @@ export function createAuth(options: AuthOptions) {
     user: {
       // Members can delete their account; their reviews, likes and lists go with it.
       deleteUser: { enabled: true },
+      // The university-only rule, whatever the route: email sign-up, an admin adding a
+      // member, or Google (checked against the address Google sends on every sign-in).
+      validateUserInfo: ({ user }) =>
+        typeof user.email === "string" && allowedEmail(user.email)
+          ? undefined
+          : {
+              error: "EMAIL_NOT_ALLOWED",
+              errorDescription: emailNotAllowedMessage(options.allowedEmailDomains),
+            },
     },
     socialProviders: options.google
       ? { google: { ...options.google, prompt: "select_account" } }
@@ -173,6 +268,45 @@ export function createAuth(options: AuthOptions) {
       // No cookie cache: every request checks the session in the database, so signing out,
       // password resets, bans and account deletion take effect immediately.
       cookieCache: { enabled: false },
+      additionalFields: {
+        // Set once the member types the code emailed for this sign-in.
+        signInCodeVerifiedAt: { type: "date", required: false, input: false },
+      },
+    },
+    databaseHooks: {
+      // No changing an address to one outside the university.
+      user: {
+        update: {
+          before: (data) => {
+            if (typeof data.email === "string" && !allowedEmail(data.email)) {
+              throw emailNotAllowed();
+            }
+            return Promise.resolve();
+          },
+        },
+      },
+      session: {
+        create: {
+          // Accounts made before the rule (or by other means) can't sign in either.
+          before: async (session, ctx) => {
+            const [user] = await db
+              .select({ email: users.email })
+              .from(users)
+              .where(eq(users.id, session.userId));
+            if (!user || !allowedEmail(user.email)) throw emailNotAllowed();
+            if (provenByPath(ctx?.path)) {
+              return { data: { ...session, signInCodeVerifiedAt: new Date() } };
+            }
+          },
+          // Every other sign-in waits for the code we email now.
+          after: async (session, ctx) => {
+            if ((session as { signInCodeVerifiedAt?: Date | null }).signInCodeVerifiedAt) return;
+            await sendSignInCode(session, {
+              google: Boolean(ctx?.path.startsWith("/callback/")),
+            });
+          },
+        },
+      },
     },
     rateLimit: {
       enabled: true,
@@ -182,6 +316,23 @@ export function createAuth(options: AuthOptions) {
     },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        const emailField = EMAIL_FIELDS[ctx.path];
+        if (emailField) {
+          const email = bodyField(ctx.body, emailField);
+          if (typeof email === "string" && email.includes("@") && !allowedEmail(email)) {
+            throw emailNotAllowed();
+          }
+        }
+        // Until the sign-in code is entered, the session can't change anything.
+        if (!openBeforeCode(ctx.path)) {
+          const current = await getSessionFromCtx(ctx);
+          if (current && !current.session.signInCodeVerifiedAt) {
+            throw APIError.from("FORBIDDEN", {
+              code: "SIGN_IN_CODE_REQUIRED",
+              message: "Enter the code we emailed you to finish signing in.",
+            });
+          }
+        }
         if (ctx.path === "/delete-user") {
           await confirmAccountDeletion(ctx);
           return;
@@ -205,30 +356,6 @@ export function createAuth(options: AuthOptions) {
             message: BREACHED_PASSWORD_MESSAGE,
           });
         }
-      }),
-      // Tell members about every sign-in, so a stranger using their account doesn't go
-      // unnoticed. Only successful sign-ins create a session, so failures send nothing.
-      after: createAuthMiddleware(async (ctx) => {
-        const google = isOAuthCallback(ctx.path);
-        if (!google && !SIGN_IN_PATHS.has(ctx.path)) return;
-        const created = ctx.context.newSession;
-        if (!created) return;
-        const { user, session } = created;
-        if (google && Date.now() - new Date(user.createdAt).getTime() < NEW_ACCOUNT_MS) return;
-
-        await send(
-          signInAlertEmail(
-            user.email,
-            user.name,
-            {
-              when: formatTime.format(new Date(session.createdAt)),
-              device: describeDevice(session.userAgent),
-              ipAddress: session.ipAddress ?? null,
-              method: google ? "google" : "password",
-            },
-            `${options.baseURL}/forgot-password`,
-          ),
-        );
       }),
     },
     advanced: {
@@ -260,6 +387,15 @@ export function createAuth(options: AuthOptions) {
       openAPI({ disableDefaultReference: true }),
     ],
   });
+  return Object.assign(auth, { sendSignInCode });
+}
+
+interface SignInSession {
+  id: string;
+  userId: string;
+  createdAt: Date;
+  userAgent?: string | null | undefined;
+  ipAddress?: string | null | undefined;
 }
 
 export type Auth = ReturnType<typeof createAuth>;

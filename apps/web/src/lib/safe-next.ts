@@ -15,7 +15,7 @@ export function safeNext(value: string | string[] | null | undefined, fallback =
     if (code < 32 || code === 127) return fallback;
   }
   // Sending someone back to an auth page after signing in would loop.
-  if (/^\/(sign-in|sign-up)(\/|\?|$)/.test(next)) return fallback;
+  if (/^\/(sign-in|sign-up|verify-sign-in)(\/|\?|$)/.test(next)) return fallback;
   return next;
 }
 
@@ -23,6 +23,13 @@ export function safeNext(value: string | string[] | null | undefined, fallback =
 export function signInHref(next: string): Route {
   const safe = safeNext(next);
   return safe === "/" ? "/sign-in" : `/sign-in?next=${encodeURIComponent(safe)}`;
+}
+
+/** "/verify-sign-in?next=/for-you": where every sign-in goes to enter the emailed code. */
+export function verifySignInHref(next: string): Route {
+  // Not safeNext: "/welcome?next=…" is a fine place to go after the code.
+  const safe = safeNext(next);
+  return safe === "/" ? "/verify-sign-in" : `/verify-sign-in?next=${encodeURIComponent(safe)}`;
 }
 
 /** "/welcome?next=/for-you": where members without a username go to pick one. */

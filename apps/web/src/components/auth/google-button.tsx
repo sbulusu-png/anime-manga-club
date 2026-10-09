@@ -3,13 +3,14 @@
 import { useState } from "react";
 
 import { authClient, authErrorMessage } from "@/lib/auth-client";
-import { signInHref, welcomeHref } from "@/lib/safe-next";
+import { signInHref, verifySignInHref, welcomeHref } from "@/lib/safe-next";
 
 import { FormAlert } from "./fields";
 
 /**
- * Sends the member to Google and back. New members land on the welcome page to pick a
- * username; returning members go straight to `next`.
+ * Sends the member to Google and back, then to enter the code we email. New members go
+ * on to the welcome page to pick a username; returning members go straight to `next`.
+ * Only university Google accounts get in (the API checks).
  */
 export function GoogleButton({ next, label }: { next: string; label: string }) {
   const [pending, setPending] = useState(false);
@@ -20,8 +21,8 @@ export function GoogleButton({ next, label }: { next: string; label: string }) {
     setError(null);
     const { error: failure } = await authClient.signIn.social({
       provider: "google",
-      callbackURL: next,
-      newUserCallbackURL: welcomeHref(next),
+      callbackURL: verifySignInHref(next),
+      newUserCallbackURL: verifySignInHref(welcomeHref(next)),
       errorCallbackURL: signInHref(next),
     });
     // On success the browser is already on its way to Google.

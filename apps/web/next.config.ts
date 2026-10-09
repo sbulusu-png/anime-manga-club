@@ -17,6 +17,8 @@ const config: NextConfig = {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
       { protocol: "https", hostname: "s4.anilist.co", pathname: "/file/anilistcdn/**" },
+      // Members' Google profile photos (served through the optimiser, see avatar.tsx).
+      { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "/**" },
     ],
   },
   // One origin for the whole site, so auth cookies are first-party (see PLAN.md 1.1).

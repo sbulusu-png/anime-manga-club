@@ -7,7 +7,7 @@ import { listEntries, media, reviewLikes, reviews, users } from "../src/db/schem
 import { createAnilistClient, toMediaRow } from "../src/lib/anilist.js";
 import { upsertMedia } from "../src/services/media.js";
 import { anilistMedia, fakeAnilist } from "./fake-anilist.js";
-import { WEB_ORIGIN, linkFromEmail, makeApp, socketFrom } from "./helpers.js";
+import { WEB_ORIGIN, enterSignInCode, linkFromEmail, makeApp, socketFrom } from "./helpers.js";
 import { cookiesFrom, createMember, nextIp, send } from "./session.js";
 import { type TestDb, createTestDb } from "./test-db.js";
 
@@ -148,6 +148,10 @@ describe("a member's journey", () => {
       password: "new-antidote-recipe-7",
     });
     cookie = cookiesFrom(signIn);
+    // Every sign-in needs the code from the email.
+    expect((await call("GET", "/api/me", cookie)).status).toBe(401);
+    expect((await enterSignInCode(app, cookie, "maomao@example.com")).status).toBe(200);
+    expect((await call("GET", "/api/me", cookie)).status).toBe(200);
 
     // 7. Leave the club: everything they made goes, and the counts stay right.
     const [me] = await db.select().from(users).where(eq(users.email, "maomao@example.com"));

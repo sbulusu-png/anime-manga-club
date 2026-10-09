@@ -1,11 +1,11 @@
 "use client";
 
-import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type SubmitEvent, useState } from "react";
 
 import { authClient, authErrorMessage } from "@/lib/auth-client";
+import { verifySignInHref } from "@/lib/safe-next";
 
 import { TEXT_LINK } from "./auth-card";
 import { FormAlert, PasswordField, SubmitButton, TextField } from "./fields";
@@ -24,12 +24,13 @@ export function SignInForm({ next }: { next: string }) {
     setError(null);
 
     const id = identifier.trim();
-    // With a callbackURL, Better Auth's client loads that page itself after signing in
-    // (a full load, so the header redraws). A confirmation link resent to an unconfirmed
-    // member also ends up there.
+    // Every sign-in then asks for the code we email. With a callbackURL, Better Auth's
+    // client loads that page itself. A confirmation link resent to an unconfirmed member
+    // also ends up there (and needs no code: opening it proves the inbox).
+    const callbackURL = verifySignInHref(next);
     const { data, error: failure } = id.includes("@")
-      ? await authClient.signIn.email({ email: id, password, callbackURL: next })
-      : await authClient.signIn.username({ username: id, password, callbackURL: next });
+      ? await authClient.signIn.email({ email: id, password, callbackURL })
+      : await authClient.signIn.username({ username: id, password, callbackURL });
 
     if (failure) {
       setError(authErrorMessage(failure));
@@ -38,7 +39,7 @@ export function SignInForm({ next }: { next: string }) {
     }
     // Keep the button busy while the browser navigates; only step in if it didn't.
     if (!data.redirect) {
-      router.replace(next as Route);
+      router.replace(callbackURL);
       router.refresh();
     }
   }
@@ -48,6 +49,7 @@ export function SignInForm({ next }: { next: string }) {
       {error && <FormAlert tone="error">{error}</FormAlert>}
       <TextField
         label="Email or username"
+        hint="Your university email, or your username."
         name="identifier"
         autoComplete="username"
         autoCapitalize="none"

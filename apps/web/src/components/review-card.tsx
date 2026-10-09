@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import type { Review, Viewer } from "@/lib/types";
 
+import { Avatar } from "./avatar";
 import { LikeButton } from "./like-button";
 import { SpoilerText } from "./spoiler-text";
 import { VerdictBadge } from "./verdict-badge";
@@ -24,38 +25,6 @@ export function timeAgo(iso: string, now = Date.now()): string {
     if (Math.abs(seconds) >= size) return RELATIVE.format(Math.round(seconds / size), unit);
   }
   return "just now";
-}
-
-/** A member's avatar, or their initial when they don't have one. */
-export function Avatar({
-  name,
-  image,
-  size = 36,
-}: {
-  name: string;
-  image: string | null;
-  size?: number;
-}) {
-  return image ? (
-    <Image
-      src={image}
-      alt=""
-      width={size}
-      height={size}
-      style={{ width: size, height: size }}
-      className="shrink-0 rounded-full border border-border object-cover"
-      // Google avatars; not worth routing through the image optimiser.
-      unoptimized
-    />
-  ) : (
-    <span
-      aria-hidden="true"
-      style={{ width: size, height: size }}
-      className="grid shrink-0 place-items-center rounded-full bg-accent font-bold text-accent-ink"
-    >
-      {name.charAt(0).toUpperCase()}
-    </span>
-  );
 }
 
 /**
@@ -136,3 +105,5 @@ export function ReviewCard({
     </article>
   );
 }
+
+export { Avatar } from "./avatar";

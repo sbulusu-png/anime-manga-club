@@ -103,31 +103,36 @@ function likeContains(term: string) {
   return `%${term.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 }
 
+/**
+ * Matches a title by any name it goes by: English, romaji, native, or AniList's
+ * alternative names, spelled loosely (see lib/title-key.ts). Used by Browse search and
+ * by matching typed lists.
+ */
+function titleSearch(q: string): SQL | undefined {
+  const pattern = likeContains(q);
+  const key = titleKey(q);
+  const words = key.split(" ").filter(Boolean);
+  return or(
+    ilike(media.titleRomaji, pattern),
+    ilike(media.titleEnglish, pattern),
+    ilike(media.titleNative, pattern),
+    // English, Japanese (in English letters or not) and alternative names, spelled
+    // loosely: every word found, in any order ("shingeki kyojin")...
+    words.length > 0
+      ? and(...words.map((word) => ilike(media.searchKey, likeContains(word))))
+      : undefined,
+    // ...or close enough to forgive a typo ("shingeky no kyojin"). Short queries
+    // match too much this way, so they rely on the exact matches above.
+    key.length >= 5 ? sql`${key} <% ${media.searchKey}` : undefined,
+  );
+}
+
 export async function listMedia(db: Db, params: ListMediaParams) {
   const sort = SORTS[params.sort];
   const conditions: (SQL | undefined)[] = [eq(media.isAdult, false)];
 
   if (params.type) conditions.push(kindCondition(params.type));
-  if (params.q) {
-    const pattern = likeContains(params.q);
-    const key = titleKey(params.q);
-    const words = key.split(" ").filter(Boolean);
-    conditions.push(
-      or(
-        ilike(media.titleRomaji, pattern),
-        ilike(media.titleEnglish, pattern),
-        ilike(media.titleNative, pattern),
-        // English, Japanese (in English letters or not) and alternative names, spelled
-        // loosely: every word found, in any order ("shingeki kyojin")...
-        words.length > 0
-          ? and(...words.map((word) => ilike(media.searchKey, likeContains(word))))
-          : undefined,
-        // ...or close enough to forgive a typo ("shingeky no kyojin"). Short queries
-        // match too much this way, so they rely on the exact matches above.
-        key.length >= 5 ? sql`${key} <% ${media.searchKey}` : undefined,
-      ),
-    );
-  }
+  if (params.q) conditions.push(titleSearch(params.q));
   if (params.genres?.length) conditions.push(arrayContains(media.genres, params.genres));
   if (params.tags?.length) conditions.push(arrayContains(media.tags, params.tags));
   if (params.season) conditions.push(eq(media.season, params.season));
@@ -271,6 +276,52 @@ export async function discoverMedia(
   const rows = await db.select().from(media).where(inArray(media.anilistId, anilistIds));
   const byAnilistId = new Map(rows.map((row) => [row.anilistId, row]));
   return anilistIds.flatMap((id) => byAnilistId.get(id) ?? []);
+}
+
+/** The best catalog matches for one typed title: exact names first, then closest, then most popular. */
+async function matchInCatalog(db: Db, q: string, limit: number) {
+  const key = titleKey(q);
+  const exact = sql`(${titleKey(q)} in (lower(coalesce(${media.titleEnglish}, '')), lower(${media.titleRomaji})))`;
+  return db
+    .select(CARD_COLUMNS)
+    .from(media)
+    .where(and(eq(media.isAdult, false), titleSearch(q)))
+    .orderBy(
+      desc(exact),
+      desc(sql`word_similarity(${key}, ${media.searchKey})`),
+      desc(sql`coalesce(${media.popularity}, 0)`),
+    )
+    .limit(limit);
+}
+
+/** AniList lookups per typed list: each one costs a request against AniList's limit. */
+const MAX_ANILIST_LOOKUPS = 8;
+
+/**
+ * Finds titles for a typed list, one line each. Lines our catalog doesn't know are looked
+ * up on AniList (which adds them to the catalog), up to MAX_ANILIST_LOOKUPS per list.
+ */
+export async function matchTypedTitles(db: Db, anilist: AnilistClient, lines: string[]) {
+  // One search per title, however it's spelled: "Naruto" and " naruto " are the same line.
+  const byKey = new Map<string, string>();
+  for (const line of lines) {
+    const key = titleKey(line);
+    if (key && !byKey.has(key)) byKey.set(key, line.trim());
+  }
+  const queries = [...byKey.values()];
+  const local = await Promise.all(queries.map((q) => matchInCatalog(db, q, 4)));
+  let lookups = 0;
+  const results = [];
+  for (const [i, q] of queries.entries()) {
+    let rows: CardRow[] = local[i] ?? [];
+    if (rows.length === 0 && lookups < MAX_ANILIST_LOOKUPS) {
+      lookups++;
+      // AniList busy or down: report the line as not found rather than failing the list.
+      rows = (await discoverMedia(db, anilist, q).catch(() => [])).slice(0, 4);
+    }
+    results.push({ query: q, matches: rows.map(toMediaSummary) });
+  }
+  return results;
 }
 
 export function isStale(row: MediaRow, now = Date.now()): boolean {

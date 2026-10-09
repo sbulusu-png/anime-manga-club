@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import type { Db } from "../db/client.js";
 import type { AnilistClient } from "../lib/anilist.js";
+import { matchTypedTitles } from "../services/media.js";
 import { AppError } from "../lib/errors.js";
 import { validate } from "../lib/validation.js";
 import { requireAuth, requireUsername } from "../middleware/auth.js";
@@ -11,6 +12,7 @@ import { rateLimit } from "../middleware/rate-limit.js";
 import {
   LIST_STATUSES,
   findUserIdByUsername,
+  addManyToList,
   getEntry,
   importFromAnilist,
   listEntriesOf,
@@ -45,6 +47,22 @@ const importBody = z.strictObject({
     .regex(/^[A-Za-z0-9]{2,20}$/, "Enter your AniList username (letters and numbers)"),
 });
 
+// A typed list: one title per line, up to 50 a time.
+const matchBody = z.strictObject({
+  titles: z.array(z.string().trim().min(1).max(100)).min(1).max(50),
+});
+const bulkBody = z.strictObject({
+  items: z
+    .array(
+      z.strictObject({
+        mediaId: z.number().int().positive().max(2_147_483_647),
+        status: z.enum(LIST_STATUSES),
+      }),
+    )
+    .min(1)
+    .max(100),
+});
+
 interface ListRouteDeps {
   db: Db;
   anilist: AnilistClient;
@@ -70,8 +88,43 @@ export function listRoutes({ db, anilist, isTrustedProxy }: ListRouteDeps) {
     keyBy: (c) => c.get("user")?.id,
   });
 
+  // Matching may look titles up on AniList, so a member gets a handful per minute.
+  const matchLimit = rateLimit({
+    name: "list-matches",
+    windowMs: 60_000,
+    max: 6,
+    isTrustedProxy,
+    keyBy: (c) => c.get("user")?.id,
+  });
+
   return (
     new Hono<AppEnv>()
+      .post(
+        "/match",
+        describeRoute({
+          tags: ["Lists"],
+          summary: "Find the titles for a typed list (best matches per line, nothing saved)",
+          security: [{ session: [] }],
+        }),
+        requireUsername,
+        matchLimit,
+        validate("json", matchBody),
+        async (c) =>
+          c.json({ results: await matchTypedTitles(db, anilist, c.req.valid("json").titles) }),
+      )
+      .post(
+        "/bulk",
+        describeRoute({
+          tags: ["Lists"],
+          summary: "Add several titles to your list at once",
+          security: [{ session: [] }],
+        }),
+        requireUsername,
+        writeLimit,
+        validate("json", bulkBody),
+        async (c) =>
+          c.json(await addManyToList(db, c.get("user")?.id ?? "", c.req.valid("json").items)),
+      )
       .post(
         "/import",
         describeRoute({

@@ -1,6 +1,7 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-import { withDb } from "./db";
+import { setSignInCode, withDb } from "./db";
 
 test("a new member signs up, confirms their email and signs in with their username", async ({
   page,
@@ -33,10 +34,34 @@ test("a new member signs up, confirms their email and signs in with their userna
   // Sign-in is limited to 3 tries per 10 seconds per visitor.
   await page.waitForTimeout(10_500);
   await page.getByRole("button", { name: "Sign in" }).click();
-  // A full page load follows (the dev server may compile the page on first visit).
+
+  // Then the code we email, every time.
+  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible({
+    timeout: 30_000,
+  });
+  const { violations } = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(violations).toEqual([]);
+  await setSignInCode(email, "135790");
+  await page.getByLabel("Sign-in code").fill("000000");
+  await page.getByRole("button", { name: "Verify and sign in" }).click();
+  await expect(page.getByText("That code isn't right. 4 tries left.")).toBeVisible();
+  await page.getByLabel("Sign-in code").fill("135790");
+  await page.getByRole("button", { name: "Verify and sign in" }).click();
+  // The dev server may compile the page on first visit.
   await expect(page).toHaveURL("/for-you", { timeout: 30_000 });
   await expect(page.getByRole("heading", { level: 1, name: "For you" })).toBeVisible();
   await expect(page.getByRole("banner").getByText(username)).toBeVisible();
+});
+
+test("only university emails can join", async ({ page }) => {
+  await page.goto("/sign-up");
+  await page.getByLabel("Username").fill(`e2e_out_${Math.random().toString(36).slice(2, 8)}`);
+  await page.getByLabel("University email").fill("someone@gmail.com");
+  await page.getByLabel("Password", { exact: true }).fill("e2e outsider paper crane river");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByText(/That's not a valid email for the club/)).toBeVisible();
 });
 
 test("a wrong password is refused with a clear message", async ({ page }) => {

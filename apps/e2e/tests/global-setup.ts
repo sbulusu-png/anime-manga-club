@@ -10,7 +10,7 @@ import {
   LEAD_STATE,
   MEMBER_STATE,
 } from "./accounts";
-import { withDb } from "./db";
+import { setSignInCode, withDb } from "./db";
 import globalTeardown from "./global-teardown";
 
 // Sign-in allows 3 tries per 10 seconds per IP; every request here shares one IP.
@@ -79,6 +79,11 @@ async function createAccount(
   });
   if (!signIn.ok())
     throw new Error(`sign-in failed: ${String(signIn.status())} ${await signIn.text()}`);
+  // Every sign-in needs the emailed code; the email can't reach example.com.
+  await setSignInCode(account.email, "246810");
+  const verified = await api.post("/api/sign-in-code/verify", { data: { code: "246810" } });
+  if (!verified.ok())
+    throw new Error(`sign-in code failed: ${String(verified.status())} ${await verified.text()}`);
   await api.storageState({ path: account.storageState });
   await api.dispose();
   return account;

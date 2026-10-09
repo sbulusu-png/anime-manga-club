@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { DEFAULT_TRUSTED_PROXIES, createProxyMatcher } from "./lib/client-ip.js";
+import { TEST_EMAIL_DOMAIN } from "./lib/email-domains.js";
 
 const optionalString = z
   .string()
@@ -41,6 +42,22 @@ const envSchema = z
       .enum(["true", "false"])
       .default("true")
       .transform((value) => value === "true"),
+    /** Comma-separated email domains that can join, e.g. "uni.edu,uni.ac.in". Required in production. */
+    ALLOWED_EMAIL_DOMAINS: z
+      .string()
+      .optional()
+      .transform((value) =>
+        value
+          ? value
+              .split(",")
+              .map((entry) => entry.trim().toLowerCase().replace(/^@/, ""))
+              .filter(Boolean)
+          : [],
+      )
+      .refine(
+        (domains) => domains.every((d) => /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d)),
+        "must be domains like uni.edu,uni.ac.in",
+      ),
     TRUSTED_PROXIES: z
       .string()
       .optional()
@@ -64,6 +81,10 @@ const envSchema = z
     message: "set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither",
     path: ["GOOGLE_CLIENT_SECRET"],
   })
+  .refine((env) => env.NODE_ENV !== "production" || env.ALLOWED_EMAIL_DOMAINS.length > 0, {
+    message: "is required in production (which email domains can join)",
+    path: ["ALLOWED_EMAIL_DOMAINS"],
+  })
   .refine((env) => env.NODE_ENV !== "production" || Boolean(env.RESEND_API_KEY), {
     message: "is required in production (emails would silently go nowhere)",
     path: ["RESEND_API_KEY"],
@@ -79,7 +100,12 @@ export function parseEnv(source: NodeJS.ProcessEnv = process.env): Env {
   if (!result.success) {
     throw new Error(`Invalid environment variables:\n${z.prettifyError(result.error)}`);
   }
-  return result.data;
+  const data = result.data;
+  // Test accounts (e2e-…@example.com) work everywhere except production.
+  if (data.NODE_ENV !== "production" && !data.ALLOWED_EMAIL_DOMAINS.includes(TEST_EMAIL_DOMAIN)) {
+    data.ALLOWED_EMAIL_DOMAINS = [...data.ALLOWED_EMAIL_DOMAINS, TEST_EMAIL_DOMAIN];
+  }
+  return data;
 }
 
 export const env = parseEnv();

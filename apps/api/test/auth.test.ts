@@ -9,6 +9,7 @@ import type { AppEnv } from "../src/types.js";
 import {
   GOOGLE_CLIENT_ID,
   WEB_ORIGIN,
+  enterSignInCode,
   linkFromEmail,
   mailbox,
   makeApp,
@@ -138,7 +139,13 @@ describe("email sign-up and sign-in", () => {
 
     const right = await post("/api/auth/sign-in/email", { email, password });
     expect(right.status).toBe(200);
-    expect((await me(cookiesFrom(right))).status).toBe(200);
+    // Signed in only once the emailed code is entered.
+    const cookie = cookiesFrom(right);
+    const waiting = await me(cookie);
+    expect(waiting.status).toBe(401);
+    expect(await waiting.json()).toMatchObject({ error: { code: "SIGN_IN_CODE_REQUIRED" } });
+    expect((await enterSignInCode(app, cookie, email)).status).toBe(200);
+    expect((await me(cookie)).status).toBe(200);
   });
 
   it("rejects passwords shorter than 8 characters", async () => {
@@ -487,11 +494,11 @@ describe("Google sign-in", () => {
   });
 });
 
-describe("sign-in alerts", () => {
+describe("sign-in code emails", () => {
   const CHROME_ON_WINDOWS =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
   const alertsTo = (email: string) =>
-    mailbox.sent.filter((e) => e.to === email && e.subject.startsWith("New sign-in"));
+    mailbox.sent.filter((e) => e.to === email && e.subject.endsWith("sign-in code"));
 
   function signIn(path: string, body: unknown, ip: string) {
     return app.request(
@@ -509,22 +516,24 @@ describe("sign-in alerts", () => {
     );
   }
 
-  it("emails the member when they sign in, with a way to lock out an intruder", async () => {
+  it("emails a code when they sign in, with a way to lock out an intruder", async () => {
     const { email, password } = await signUp({ username: "alerted" });
-    // Confirming the email signs the member in too, but that's not a "new sign-in".
+    // Confirming the email signs the member in too: the link already proved the inbox.
     expect(alertsTo(email)).toHaveLength(0);
 
     const res = await signIn("/api/auth/sign-in/email", { email, password }, "198.51.100.77");
     expect(res.status).toBe(200);
 
     const [alert] = alertsTo(email);
+    expect(alert?.subject).toMatch(/^\d{6} is your Anime Manga Club sign-in code$/);
+    expect(alert?.text).toContain(alert?.subject.slice(0, 6));
     expect(alert?.text).toContain("Device: Chrome on Windows");
     expect(alert?.text).toContain("IP address: 198.51.100.77");
     expect(alert?.text).toMatch(/When: .+ (IST|GMT\+5:30)/);
     expect(alert?.text).toContain(`Change my password: ${WEB_ORIGIN}/forgot-password`);
   });
 
-  it("also emails on username sign-in", async () => {
+  it("also emails a code on username sign-in", async () => {
     const { email, password } = await signUp({ username: "alerted_by_name" });
 
     await signIn(

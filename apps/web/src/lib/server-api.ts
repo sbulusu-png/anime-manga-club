@@ -6,7 +6,7 @@ import { cache } from "react";
 
 import type { Viewer } from "./types";
 
-import { signInHref, welcomeHref } from "./safe-next";
+import { signInHref, verifySignInHref, welcomeHref } from "./safe-next";
 
 /** The API, reached directly from the server (browsers go through the /api proxy). */
 const API_ORIGIN = process.env.API_ORIGIN ?? "http://localhost:4000";
@@ -86,6 +86,8 @@ export interface CurrentUser {
 type Session =
   | { state: "member"; user: CurrentUser }
   | { state: "guest" }
+  // Signed in, but hasn't typed the code we emailed yet: signed out for everything else.
+  | { state: "pending" }
   // Has a session cookie, but the API couldn't say whose (it's down or restarting).
   | { state: "unknown" };
 
@@ -101,8 +103,13 @@ const getSession = cache(async (): Promise<Session> => {
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
     });
-    // 401: the session expired or was revoked.
-    if (res.status === 401) return { state: "guest" };
+    // 401: the session expired or was revoked, or is waiting for its sign-in code.
+    if (res.status === 401) {
+      const body = (await res.json().catch(() => null)) as { error?: { code?: string } } | null;
+      return body?.error?.code === "SIGN_IN_CODE_REQUIRED"
+        ? { state: "pending" }
+        : { state: "guest" };
+    }
     if (!res.ok) return { state: "unknown" };
     const body = (await res.json()) as { user: CurrentUser };
     return { state: "member", user: body.user };
@@ -118,6 +125,36 @@ const getSession = cache(async (): Promise<Session> => {
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const session = await getSession();
   return session.state === "member" ? session.user : null;
+}
+
+/** True when someone signed in but hasn't entered their emailed code yet. */
+export async function isSignInPending(): Promise<boolean> {
+  return (await getSession()).state === "pending";
+}
+
+export interface SignInCodeStatus {
+  email: string;
+  sent: boolean;
+  expiresAt?: string;
+  resendAvailableAt?: string;
+  canResend?: boolean;
+  expired?: boolean;
+}
+
+/** Where the sign-in code went and when another can be sent, or null if none is waiting. */
+export async function getSignInCodeStatus(): Promise<SignInCodeStatus | null> {
+  const cookieHeader = (await cookies()).toString();
+  if (!cookieHeader.includes(SESSION_COOKIE)) return null;
+  try {
+    const res = await fetch(`${API_ORIGIN}/api/sign-in-code`, {
+      headers: { cookie: cookieHeader },
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    });
+    return res.ok ? ((await res.json()) as SignInCodeStatus) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** What review cards need to know about who's looking. */
@@ -153,5 +190,6 @@ export async function requireSignedIn(next: string): Promise<CurrentUser> {
   // Don't send a signed-in member to the sign-in page just because the API hiccuped;
   // the error page offers "Try again" instead.
   if (session.state === "unknown") throw new Error("Couldn't check who's signed in.");
+  if (session.state === "pending") redirect(verifySignInHref(next));
   redirect(signInHref(next));
 }

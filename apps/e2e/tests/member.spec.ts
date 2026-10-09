@@ -103,11 +103,28 @@ test("a member likes another member's review", async ({ page, baseURL }) => {
   ).toBeVisible();
 });
 
+test("a member types their list, checks the matches and adds them", async ({ page }) => {
+  // Type a title the catalog has, as it appears on its page.
+  await page.goto(await pickTitle(page));
+  const name = (await page.getByRole("heading", { level: 1 }).textContent())?.trim() ?? "";
+  await page.getByRole("link", { name: "Add your anime list" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Add your list" })).toBeVisible();
+
+  await page.getByLabel("Your titles, one per line").fill(`${name}
+no such title zzqx`);
+  await page.getByRole("button", { name: "Find titles" }).click();
+  // The real title is matched (and chosen); the made-up one isn't.
+  await expect(page.getByLabel(`You typed “${name}”`)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("No match found")).toBeVisible();
+  await page.getByRole("button", { name: /^Add 1 title as completed$/ }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Added 1 title" })).toBeVisible();
+});
+
 test("the import page checks the AniList username before asking AniList", async ({ page }) => {
   await page.goto("/");
   await page.goto(await pickTitle(page));
-  await page.getByRole("link", { name: "Import your anime list" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Import your list" })).toBeVisible();
+  await page.getByRole("link", { name: "Add your anime list" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Add your list" })).toBeVisible();
   await page.getByLabel("AniList username").fill("not a name!");
   await page.getByRole("button", { name: "Import my list" }).click();
   await expect(

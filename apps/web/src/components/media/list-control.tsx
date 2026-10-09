@@ -69,7 +69,7 @@ export function ListControl({
         href="/import"
         className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-3 py-2 text-center text-sm font-semibold text-link hover:bg-surface-2"
       >
-        <span aria-hidden="true">+</span> Import your anime list
+        <span aria-hidden="true">+</span> Add your anime list
       </Link>
       <p id={headingId} className="text-sm font-semibold">
         On your list

@@ -9,5 +9,7 @@ export interface AppEnv {
     log: Logger;
     user: AuthUser | null;
     session: AuthSession["session"] | null;
+    /** A session still waiting for its emailed sign-in code (user and session are null). */
+    pendingSession: AuthSession | null;
   };
 }

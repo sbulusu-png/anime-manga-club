@@ -20,8 +20,22 @@ describe("parseEnv", () => {
       EMAIL_FROM: "Anime Manga Club <onboarding@resend.dev>",
       REQUIRE_EMAIL_VERIFICATION: true,
       TRUSTED_PROXIES: DEFAULT_TRUSTED_PROXIES,
+      // Test accounts' example.com is added outside production.
+      ALLOWED_EMAIL_DOMAINS: ["example.com"],
       ...required,
     });
+  });
+
+  it("needs the university's email domains in production, and only those", () => {
+    const production = { ...required, NODE_ENV: "production", RESEND_API_KEY: "re_test" };
+    expect(() => parseEnv(production)).toThrow(/ALLOWED_EMAIL_DOMAINS/);
+    expect(
+      parseEnv({ ...production, ALLOWED_EMAIL_DOMAINS: " @University.example , college.example " })
+        .ALLOWED_EMAIL_DOMAINS,
+    ).toEqual(["university.example", "college.example"]);
+    expect(() => parseEnv({ ...production, ALLOWED_EMAIL_DOMAINS: "not a domain" })).toThrow(
+      /ALLOWED_EMAIL_DOMAINS/,
+    );
   });
 
   it("prefers API_PORT over PORT", () => {
@@ -66,7 +80,12 @@ describe("parseEnv", () => {
 
   it("requires a Resend key in production, but not in development", () => {
     expect(() => parseEnv({ ...required, NODE_ENV: "production" })).toThrow(/RESEND_API_KEY/);
-    const production = parseEnv({ ...required, NODE_ENV: "production", RESEND_API_KEY: "re_1" });
+    const production = parseEnv({
+      ...required,
+      NODE_ENV: "production",
+      RESEND_API_KEY: "re_1",
+      ALLOWED_EMAIL_DOMAINS: "university.example",
+    });
     expect(production.NODE_ENV).toBe("production");
   });
 

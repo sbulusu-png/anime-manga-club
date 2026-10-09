@@ -1,6 +1,5 @@
 "use client";
 
-import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { type ReactNode, type SubmitEvent, useState } from "react";
 
@@ -11,6 +10,7 @@ import {
   authErrorMessage,
   usernameProblem,
 } from "@/lib/auth-client";
+import { verifySignInHref } from "@/lib/safe-next";
 
 import { FormAlert, PasswordField, SubmitButton, TextField } from "./fields";
 import { ResendVerification } from "./resend-verification";
@@ -68,6 +68,8 @@ export function SignUpForm({ next, intro }: { next: string; intro?: ReactNode })
       const message = authErrorMessage(error);
       if (error.code?.startsWith("USERNAME") || error.code === "INVALID_USERNAME") {
         setErrors({ username: message });
+      } else if (error.code === "EMAIL_NOT_ALLOWED") {
+        setErrors({ email: message });
       } else if (error.code?.startsWith("PASSWORD")) {
         setErrors({ password: message });
       } else {
@@ -76,9 +78,10 @@ export function SignUpForm({ next, intro }: { next: string; intro?: ReactNode })
       return;
     }
 
-    // Without email confirmation (local development), the member is already signed in.
+    // Without email confirmation (local development), the member is signed in and only
+    // needs the code we emailed.
     if (data.token) {
-      router.replace(next as Route);
+      router.replace(verifySignInHref(next));
       router.refresh();
       return;
     }
@@ -115,7 +118,9 @@ export function SignUpForm({ next, intro }: { next: string; intro?: ReactNode })
           error={errors.username}
         />
         <TextField
-          label="Email"
+          label="University email"
+          hint="Use your university email address."
+          placeholder="you@university.edu"
           name="email"
           type="email"
           autoComplete="email"

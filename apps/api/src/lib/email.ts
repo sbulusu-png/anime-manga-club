@@ -68,21 +68,32 @@ const HTML_ESCAPES: Record<string, string> = {
 };
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch] ?? ch);
 
-function layout(greeting: string, lines: string[], action: { label: string; url: string }) {
+function layout(
+  greeting: string,
+  lines: string[],
+  action: { label: string; url: string } | null,
+  /** Shown big near the top, such as a sign-in code. */
+  highlight?: string,
+) {
   const text = [
     greeting,
     "",
+    ...(highlight ? [highlight, ""] : []),
     ...lines,
     "",
-    `${action.label}: ${action.url}`,
-    "",
+    ...(action ? [`${action.label}: ${action.url}`, ""] : []),
     "— Anime Manga Club",
   ].join("\n");
   const html = `<!doctype html><html><body style="font-family:system-ui,sans-serif;line-height:1.5;color:#1b1830">
 <p>${escapeHtml(greeting)}</p>
+${highlight ? `<p style="font-size:32px;font-weight:700;letter-spacing:8px;margin:16px 0">${escapeHtml(highlight)}</p>` : ""}
 ${lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("\n")}
-<p><a href="${escapeHtml(action.url)}" style="display:inline-block;padding:10px 18px;background:#e63946;color:#fff;border-radius:8px;text-decoration:none">${escapeHtml(action.label)}</a></p>
-<p style="font-size:13px;color:#666">Or paste this link into your browser: ${escapeHtml(action.url)}</p>
+${
+  action
+    ? `<p><a href="${escapeHtml(action.url)}" style="display:inline-block;padding:10px 18px;background:#e63946;color:#fff;border-radius:8px;text-decoration:none">${escapeHtml(action.label)}</a></p>
+<p style="font-size:13px;color:#666">Or paste this link into your browser: ${escapeHtml(action.url)}</p>`
+    : ""
+}
 <p>— Anime Manga Club</p>
 </body></html>`;
   return { text, html };
@@ -141,36 +152,37 @@ export interface SignInDetails {
 }
 
 /**
- * "New sign-in to your account", with what to do if it wasn't them. For password
- * sign-ins that's a password reset (which also signs out every device); for Google
- * sign-ins it's the Google account that needs securing.
+ * The code for finishing a sign-in, with where the sign-in came from. If it wasn't them,
+ * the stranger can't get in without this code, but their password (or Google account)
+ * is known, so the email says what to secure.
  */
-export function signInAlertEmail(
+export function signInCodeEmail(
   to: string,
   name: string,
+  code: string,
   details: SignInDetails,
   resetUrl: string,
 ): Email {
   const google = details.method === "google";
   return {
     to,
-    subject: "New sign-in to your Anime Manga Club account",
+    subject: `${code} is your Anime Manga Club sign-in code`,
     ...layout(
       `Hi ${name},`,
       [
-        "Your Anime Manga Club account was just signed in to.",
+        "Enter this code to finish signing in. It works for 10 minutes. Never share it: the club will never ask you for it.",
         `When: ${details.when}`,
         `Device: ${details.device}`,
         ...(details.ipAddress ? [`IP address: ${details.ipAddress}`] : []),
         `Signed in with: ${google ? "Google" : "your password"}`,
-        "If this was you, there's nothing to do.",
         google
-          ? "If it wasn't, someone may be able to use your Google account. Change your Google password and check which devices are signed in to it."
-          : "If it wasn't, change your password now. Resetting it signs you out on every device, including theirs.",
+          ? "Not you? Don't enter the code. Someone may be able to use your Google account: change your Google password and check which devices are signed in to it."
+          : "Not you? Don't enter the code, and change your password now: someone knows it.",
       ],
       google
         ? { label: "Secure my Google account", url: "https://myaccount.google.com/security" }
         : { label: "Change my password", url: resetUrl },
+      code,
     ),
   };
 }

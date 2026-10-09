@@ -28,6 +28,22 @@ Files: [`Dockerfile`](Dockerfile), [`fly.toml`](fly.toml), and [`.dockerignore`]
 
    `NODE_ENV`, `PORT`, `LOG_LEVEL` and `CLUB_TIMEZONE` are already set in `fly.toml`. Don't set `API_PORT` on Fly.
 
+   Also set `ALLOWED_EMAIL_DOMAINS`: the university's email domains, comma-separated (e.g. `uni.edu,uni.ac.in`). Only those addresses and their subdomains can join, and the API won't start in production without it. Every sign-in also needs a 6-digit code sent by email, so email must work before launch.
+
+## Sending email from your own domain
+
+Resend's test sender (`onboarding@resend.dev`) only delivers to your own inbox, so sign-in codes won't reach members until you verify a domain:
+
+1. In Resend, go to **Domains → Add domain** and enter a subdomain of yours, e.g. `mail.yourdomain.com`. A subdomain keeps the club's mail reputation separate from the main domain.
+2. Resend lists DNS records (a TXT record for SPF, a TXT record for DKIM, and an MX record). In Hostinger, open **Domains → your domain → DNS / Nameservers → DNS records** and add each one exactly as shown.
+3. Back in Resend, click **Verify**. It usually takes minutes, sometimes a few hours.
+4. Set `EMAIL_FROM="Anime Manga Club <club@mail.yourdomain.com>"` (Fly secret, and `.env` locally).
+5. Send yourself a sign-in code at a university address and check it lands in the inbox, not spam.
+
+## Google sign-in for everyone
+
+In Google Cloud Console → **Google Auth Platform → Audience**, the app starts in **Testing**, where only the listed test users can sign in. Click **Publish app** to allow everyone. With only the basic scopes (`openid`, `email`, `profile`) Google doesn't need to review the app. Anyone with a Google account can then reach Google's screen, but the API only lets university addresses in.
+
 ## Deploy
 
 From the repository root:
