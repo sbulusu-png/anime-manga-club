@@ -32,11 +32,9 @@ test("a member reviews a title, tracks it on their list, and sees it on their pr
   await page.getByRole("button", { name: "Post review" }).click();
   await expect(page.getByText("You said")).toBeVisible();
 
-  // The club verdict gauge counts it straight away.
+  // The club verdict is the club lead's to give: members don't get its buttons.
   const verdict = page.getByRole("region", { name: "Club verdict" });
-  await expect(verdict.getByRole("img")).toHaveAttribute("aria-label", /Perfection: \d+ votes?/, {
-    timeout: 30_000,
-  });
+  await expect(verdict.getByRole("button")).toHaveCount(0);
 
   // The list: four status buttons, no episode counter.
   const list = page.getByRole("group", { name: "On your list" });

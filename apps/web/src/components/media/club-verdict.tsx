@@ -1,18 +1,34 @@
+import type { Route } from "next";
+import Link from "next/link";
+
+import { RATING_INFO } from "@/lib/rating";
 import type { MediaDetail } from "@/lib/types";
 
-import { EvaluationBar } from "../evaluation-bar";
 import { VerdictBadge } from "../verdict-badge";
+import { ClubVerdictEditor } from "./club-verdict-editor";
 
-/** The club's overall verdict on a title, and how members split across the four. */
+const givenOn = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "Asia/Kolkata",
+});
+
+/** The club's verdict on a title, given by a club lead; leads can change it here. */
 export function ClubVerdict({
+  mediaId,
   club,
+  canEdit = false,
   wide = false,
 }: {
+  mediaId: number;
   club: MediaDetail["club"];
-  /** In the main column: a bigger heading, and the gauge beside its legend. */
+  /** Club leads see buttons to give, change or remove it. */
+  canEdit?: boolean;
+  /** In the main column: a bigger heading. */
   wide?: boolean;
 }) {
-  const total = club.reviewCount;
+  const giver = club.givenBy?.username ? club.givenBy : null;
 
   return (
     <section
@@ -26,23 +42,31 @@ export function ClubVerdict({
         Club verdict
       </h2>
       {club.verdict ? (
-        <>
-          <EvaluationBar
-            counts={club.breakdown}
-            wide={wide}
-            center={
-              <>
-                <VerdictBadge rating={club.verdict} />
-                <span className="text-xs text-muted">
-                  from {total} {total === 1 ? "review" : "reviews"}
-                </span>
-              </>
-            }
-          />
-        </>
+        <div className="flex flex-col items-start gap-2">
+          <VerdictBadge rating={club.verdict} className="px-4 py-1.5 text-base" />
+          <p className="text-sm text-muted">{RATING_INFO[club.verdict].blurb}</p>
+          {giver || club.givenAt ? (
+            <p className="text-xs text-muted">
+              Given
+              {giver ? (
+                <>
+                  {" by "}
+                  <Link
+                    href={`/u/${giver.username ?? ""}` as Route}
+                    className="font-semibold text-link hover:underline"
+                  >
+                    @{giver.displayUsername ?? giver.username}
+                  </Link>
+                </>
+              ) : null}
+              {club.givenAt ? ` on ${givenOn.format(new Date(club.givenAt))}` : null}
+            </p>
+          ) : null}
+        </div>
       ) : (
-        <p className="text-sm text-muted">No verdicts yet. Be the first to give one!</p>
+        <p className="text-sm text-muted">The club lead hasn&apos;t given a verdict yet.</p>
       )}
+      {canEdit ? <ClubVerdictEditor mediaId={mediaId} current={club.verdict} /> : null}
     </section>
   );
 }

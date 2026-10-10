@@ -5,7 +5,9 @@ import { z } from "zod";
 import type { Db } from "../db/client.js";
 import type { AnilistClient } from "../lib/anilist.js";
 import { AppError } from "../lib/errors.js";
+import { RATINGS } from "../lib/rating.js";
 import { validate } from "../lib/validation.js";
+import { requireRole } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
 import {
   MEDIA_KINDS,
@@ -17,10 +19,11 @@ import {
   isStale,
   listGenres,
   listMedia,
-  ratingBreakdown,
   refreshMedia,
+  setClubVerdict,
   toMediaDetail,
   toMediaSummary,
+  verdictGiver,
 } from "../services/media.js";
 import { similarTo, toRecommendationJson } from "../services/recommendations.js";
 import type { AppEnv } from "../types.js";
@@ -153,16 +156,58 @@ export function mediaRoutes({ db, anilist, isTrustedProxy }: MediaRouteDeps) {
             });
           }
 
-          const [characters, breakdown] = await Promise.all([
+          const [characters, giver] = await Promise.all([
             // Characters are a nice-to-have: the page still loads if AniList is down.
             getCharacters(anilist, row.anilistId).catch((err: unknown) => {
               c.get("log").warn({ err, mediaId: row.id }, "could not load characters");
               return [];
             }),
-            ratingBreakdown(db, row.id),
+            verdictGiver(db, row),
           ]);
 
-          return c.json({ item: toMediaDetail(row, characters, breakdown) });
+          return c.json({ item: toMediaDetail(row, characters, giver) });
+        },
+      )
+
+      // The club verdict is the club lead's call.
+      .put(
+        "/:id/club-verdict",
+        describeRoute({
+          tags: ["Club"],
+          summary: "Give or change a title's club verdict (club leads)",
+          security: [{ session: [] }],
+        }),
+        requireRole("admin"),
+        validate("param", idParam),
+        validate("json", z.strictObject({ verdict: z.enum(RATINGS) })),
+        async (c) => {
+          const lead = c.get("user");
+          if (!lead) throw new Error("unreachable");
+          const row = await setClubVerdict(
+            db,
+            c.req.valid("param").id,
+            c.req.valid("json").verdict,
+            lead.id,
+          );
+          if (!row) throw notFound();
+          return c.json({ club: { verdict: c.req.valid("json").verdict } });
+        },
+      )
+      .delete(
+        "/:id/club-verdict",
+        describeRoute({
+          tags: ["Club"],
+          summary: "Remove a title's club verdict (club leads)",
+          security: [{ session: [] }],
+        }),
+        requireRole("admin"),
+        validate("param", idParam),
+        async (c) => {
+          const lead = c.get("user");
+          if (!lead) throw new Error("unreachable");
+          const row = await setClubVerdict(db, c.req.valid("param").id, null, lead.id);
+          if (!row) throw notFound();
+          return c.body(null, 204);
         },
       )
   );

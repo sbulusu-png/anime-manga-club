@@ -226,7 +226,7 @@ export default async function MediaPage({ params }: Props) {
             )}
           </section>
 
-          <ClubVerdict club={media.club} wide />
+          <ClubVerdict mediaId={media.id} club={media.club} canEdit={user?.role === "admin"} wide />
 
           {media.tags.length > 0 && (
             <section aria-labelledby="tags-heading" className="flex flex-col gap-2">

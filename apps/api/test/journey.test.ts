@@ -108,13 +108,9 @@ describe("a member's journey", () => {
     expect(written.status).toBe(201);
     const { item: review } = await json<{ item: { id: string } }>(written);
 
-    // 4. Another member likes it; the club verdict and feed update.
+    // 4. Another member likes it; the feed updates.
     const jinshi = await createMember(app, "Jinshi");
     await call("PUT", `/api/reviews/${review.id}/like`, jinshi.cookie);
-    const detail = await json<{ item: { club: Record<string, unknown> } }>(
-      call("GET", `/api/media/${diariesId}`),
-    );
-    expect(detail.item.club).toMatchObject({ verdict: "perfection", reviewCount: 1 });
     const top = await json<{ items: { id: string; likeCount: number }[] }>(
       call("GET", "/api/reviews?sort=top"),
     );

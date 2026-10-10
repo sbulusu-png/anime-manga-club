@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { LEAD_STATE } from "./accounts";
+import { LEAD_STATE, accounts } from "./accounts";
 
 test.use({ storageState: LEAD_STATE });
 
@@ -42,4 +42,48 @@ test("a club lead plans next week's pick privately, edits it and removes it", as
   await page.getByRole("button", { name: "Remove" }).click();
   await page.getByRole("button", { name: "Remove" }).click();
   await expect(page.getByRole("heading", { name: "Picks (0)" })).toBeVisible();
+});
+
+test("a club lead gives a title its club verdict, changes it and removes it", async ({
+  page,
+  browser,
+}) => {
+  // A title without a club verdict yet, so this never touches a real one.
+  const catalog = await page.request.get("/api/media?sort=popularity&limit=50");
+  const { items } = (await catalog.json()) as {
+    items: { id: number; club: { verdict: string | null } }[];
+  };
+  const title = items.find((item) => item.club.verdict === null);
+  expect(title, "the catalog should have a title without a club verdict").toBeDefined();
+  const path = `/media/${String(title?.id)}`;
+
+  await page.goto(path);
+  await page.waitForLoadState("networkidle");
+  // Not checking the starting text: after an interrupted run, the site may briefly show
+  // a cached copy. Each click below refreshes it.
+  const verdict = page.getByRole("region", { name: "Club verdict" });
+  await verdict.getByRole("button", { name: "Go for it" }).click();
+  await expect(verdict.getByRole("button", { name: "Go for it" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  const { lead } = accounts();
+  await expect(verdict.getByText(`Given by @${lead.username}`, { exact: false })).toBeVisible();
+
+  // Everyone else sees it, without the lead's buttons.
+  const visitor = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const guest = await visitor.newPage();
+  await guest.goto(path);
+  const seen = guest.getByRole("region", { name: "Club verdict" });
+  await expect(seen.getByText("Go for it", { exact: true })).toBeVisible();
+  await expect(seen.getByRole("button")).toHaveCount(0);
+  await visitor.close();
+
+  await verdict.getByRole("button", { name: "Perfection" }).click();
+  await expect(verdict.getByRole("button", { name: "Perfection" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await verdict.getByRole("button", { name: "Remove the club verdict" }).click();
+  await expect(verdict.getByText("The club lead hasn't given a verdict yet.")).toBeVisible();
 });

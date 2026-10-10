@@ -266,60 +266,37 @@ describe("likes", () => {
   });
 });
 
-describe("club verdict", () => {
-  it("averages members' verdicts and follows edits and deletes", async () => {
-    expect(await clubOf(onePiece)).toMatchObject({ verdict: null, average: null, reviewCount: 0 });
+// Members' verdicts are summed per title for the suggestions (the club verdict itself is
+// the club lead's: see club-verdict.test.ts).
+async function countsOf(mediaId: number) {
+  const [row] = await db.select().from(media).where(eq(media.id, mediaId));
+  return [row?.clubReviewCount, row?.clubScoreSum];
+}
+
+describe("members' verdicts", () => {
+  it("are counted per title, following edits and deletes", async () => {
+    expect(await countsOf(onePiece)).toEqual([0, 0]);
 
     const first = await write(alice, onePiece, "perfection"); // 4
     await write(bob, onePiece, "timepass"); // 2
-    expect(await clubOf(onePiece)).toMatchObject({
-      verdict: "go_for_it",
-      average: 3,
-      reviewCount: 2,
-    });
+    expect(await countsOf(onePiece)).toEqual([2, 6]);
 
     await send(app, "PATCH", `/api/reviews/${first.id}`, {
       cookie: alice.cookie,
       body: { rating: "skip" },
     });
-    // (1 + 2) / 2 = 1.5, which rounds up to Timepass.
-    expect(await clubOf(onePiece)).toMatchObject({
-      verdict: "timepass",
-      average: 1.5,
-      reviewCount: 2,
-    });
+    expect(await countsOf(onePiece)).toEqual([2, 3]);
 
     await send(app, "DELETE", `/api/reviews/${first.id}`, { cookie: alice.cookie });
-    expect(await clubOf(onePiece)).toMatchObject({
-      verdict: "timepass",
-      average: 2,
-      reviewCount: 1,
-    });
+    expect(await countsOf(onePiece)).toEqual([1, 2]);
   });
 
-  it("counts each verdict for the title page", async () => {
+  it("don't set the club verdict (a club lead does)", async () => {
     await write(alice, bleach, "perfection");
-    await write(bob, bleach, "perfection");
-    await write(carol, bleach, "skip");
-
-    expect(await clubOf(bleach)).toEqual({
-      verdict: "go_for_it",
-      average: 3,
-      reviewCount: 3,
-      breakdown: { skip: 1, timepass: 0, go_for_it: 0, perfection: 2 },
-    });
+    expect(await clubOf(bleach)).toEqual({ verdict: null, givenBy: null, givenAt: null });
   });
 
-  it("sorts titles by club verdict, unreviewed last", async () => {
-    await write(alice, bleach, "perfection");
-    await write(alice, onePiece, "timepass");
-
-    const res = await send(app, "GET", "/api/media?sort=club");
-    const { items } = (await res.json()) as { items: { id: number }[] };
-    expect(items.map((item) => item.id)).toEqual([bleach, onePiece]);
-  });
-
-  it("stays correct when a member deletes their account", async () => {
+  it("stay correct when a member deletes their account", async () => {
     const leaver = await createMember(app, "Leaver");
     const { id } = await write(alice, onePiece, "perfection");
     await write(leaver, onePiece, "skip");
@@ -327,11 +304,7 @@ describe("club verdict", () => {
 
     await db.delete(users).where(eq(users.id, leaver.id));
 
-    expect(await clubOf(onePiece)).toMatchObject({
-      verdict: "perfection",
-      average: 4,
-      reviewCount: 1,
-    });
+    expect(await countsOf(onePiece)).toEqual([1, 4]);
     const [row] = await db.select().from(reviews).where(eq(reviews.id, id));
     expect(row?.likeCount).toBe(0);
   });

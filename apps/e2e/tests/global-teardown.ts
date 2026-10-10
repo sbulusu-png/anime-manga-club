@@ -11,6 +11,12 @@ export default async function globalTeardown() {
       "delete from club_suggestions where suggested_by_id in (select id from users where email like $1)",
       [E2E_EMAIL_PATTERN],
     );
+    // Club verdicts also outlive the lead who gave them, so undo test leads' verdicts.
+    await db.query(
+      `update media set club_verdict = null, club_verdict_by_id = null, club_verdict_at = null
+        where club_verdict_by_id in (select id from users where email like $1)`,
+      [E2E_EMAIL_PATTERN],
+    );
     // Reviews, likes and lists go with the account (cascades keep the club counts right).
     await db.query("delete from users where email like $1", [E2E_EMAIL_PATTERN]);
     await db.query("delete from media where anilist_id >= 990000000");

@@ -3,11 +3,8 @@
 import type { Rating } from "./rating";
 
 export interface ClubStats {
-  /** The members' average, rounded to the nearest verdict; null until someone reviews. */
+  /** The club verdict, given by a club lead; null until one does. */
   verdict: Rating | null;
-  /** The same average on the 1-4 scale, to 2 decimals. */
-  average: number | null;
-  reviewCount: number;
 }
 
 export interface MediaSummary {
@@ -40,7 +37,11 @@ export interface Character {
 }
 
 export interface MediaDetail extends MediaSummary {
-  club: ClubStats & { breakdown: Record<Rating, number> };
+  club: ClubStats & {
+    /** The lead who gave it (null if none, or they've left the club). */
+    givenBy: { username: string | null; displayUsername: string | null } | null;
+    givenAt: string | null;
+  };
   malId: number | null;
   synopsis: string | null;
   bannerImageUrl: string | null;

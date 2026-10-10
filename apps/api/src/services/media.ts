@@ -13,11 +13,11 @@ import {
 } from "drizzle-orm";
 
 import type { Db } from "../db/client.js";
-import { media, reviews } from "../db/schema/index.js";
+import { media, users } from "../db/schema/index.js";
 import { type AnilistClient, type Character, toMediaRow } from "../lib/anilist.js";
 import { type Cursor, decodeCursor, encodeCursor } from "../lib/cursor.js";
 import { AppError } from "../lib/errors.js";
-import { RATINGS, type Rating, valueToRating } from "../lib/rating.js";
+import { type Rating, ratingToValue, valueToRating } from "../lib/rating.js";
 import { titleKey } from "../lib/title-key.js";
 import { TtlCache } from "../lib/ttl-cache.js";
 
@@ -82,12 +82,8 @@ export interface ListMediaParams {
 const SORTS: Record<MediaSort, { expr: SQL<number | string>; direction: "asc" | "desc" }> = {
   popularity: { expr: sql<number>`coalesce(${media.popularity}, -1)`, direction: "desc" },
   score: { expr: sql<number>`coalesce(${media.anilistScore}, -1)`, direction: "desc" },
-  // Club average x100 as an integer (so it round-trips exactly in cursors); unreviewed last.
-  club: {
-    expr: sql<number>`case when ${media.clubReviewCount} > 0
-      then round(${media.clubScoreSum} * 100.0 / ${media.clubReviewCount})::int else -1 end`,
-    direction: "desc",
-  },
+  // The club lead's verdict, best first; titles without one last.
+  club: { expr: sql<number>`coalesce(${media.clubVerdict}, -1)`, direction: "desc" },
   newest: {
     expr: sql<number>`coalesce(${media.seasonYear}, ${media.startYear}, -1)`,
     direction: "desc",
@@ -385,40 +381,59 @@ export function toMediaSummary(row: CardRow) {
   };
 }
 
-/**
- * The club's verdict (members' average, rounded to the nearest verdict), the average
- * itself on the 1-4 scale (2 decimals, for sorting and finer display), and how many
- * reviews it's based on.
- */
-export function clubStats(row: Pick<MediaRow, "clubReviewCount" | "clubScoreSum">) {
-  const average = row.clubReviewCount > 0 ? row.clubScoreSum / row.clubReviewCount : null;
-  return {
-    verdict: average === null ? null : valueToRating(average),
-    average: average === null ? null : Math.round(average * 100) / 100,
-    reviewCount: row.clubReviewCount,
-  };
+/** The club verdict, as a club lead gave it (null until one does). */
+export function clubStats(row: Pick<MediaRow, "clubVerdict">) {
+  return { verdict: row.clubVerdict === null ? null : valueToRating(row.clubVerdict) };
 }
 
-export type RatingBreakdown = Record<Rating, number>;
+export interface VerdictGiver {
+  username: string | null;
+  displayUsername: string | null;
+}
 
-/** How many members gave each verdict, for a title's page. */
-export async function ratingBreakdown(db: Db, mediaId: number): Promise<RatingBreakdown> {
-  const rows = await db
-    .select({ score: reviews.score, count: sql<number>`count(*)::int` })
-    .from(reviews)
-    .where(eq(reviews.mediaId, mediaId))
-    .groupBy(reviews.score);
-  const breakdown = Object.fromEntries(RATINGS.map((r) => [r, 0])) as RatingBreakdown;
-  for (const { score, count } of rows) breakdown[valueToRating(score)] = count;
-  return breakdown;
+/** Who gave a title's club verdict, for its page (null if no one, or they've left). */
+export async function verdictGiver(db: Db, row: MediaRow): Promise<VerdictGiver | null> {
+  if (row.clubVerdict === null || !row.clubVerdictById) return null;
+  const [giver] = await db
+    .select({ username: users.username, displayUsername: users.displayUsername })
+    .from(users)
+    .where(eq(users.id, row.clubVerdictById));
+  return giver ?? null;
+}
+
+/** A club lead gives (or changes) a title's club verdict; null removes it. */
+export async function setClubVerdict(
+  db: Db,
+  mediaId: number,
+  verdict: Rating | null,
+  leadId: string,
+): Promise<MediaRow | null> {
+  const [row] = await db
+    .update(media)
+    .set(
+      verdict === null
+        ? { clubVerdict: null, clubVerdictById: null, clubVerdictAt: null }
+        : {
+            clubVerdict: ratingToValue(verdict),
+            clubVerdictById: leadId,
+            clubVerdictAt: new Date(),
+          },
+    )
+    .where(and(eq(media.id, mediaId), eq(media.isAdult, false)))
+    .returning();
+  return row ?? null;
 }
 
 /** Public JSON for a title's own page. */
-export function toMediaDetail(row: MediaRow, characters: Character[], breakdown: RatingBreakdown) {
+export function toMediaDetail(row: MediaRow, characters: Character[], giver: VerdictGiver | null) {
   const summary = toMediaSummary(row);
   return {
     ...summary,
-    club: { ...summary.club, breakdown },
+    club: {
+      ...summary.club,
+      givenBy: giver,
+      givenAt: row.clubVerdict === null ? null : (row.clubVerdictAt?.toISOString() ?? null),
+    },
     malId: row.malId,
     synopsis: row.synopsis,
     bannerImageUrl: row.bannerImageUrl,

@@ -78,6 +78,13 @@
       "when": 1791564685060,
       "tag": "0010_sign_in_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791617739430,
+      "tag": "0011_lead_club_verdict",
+      "breakpoints": true
     }
   ]
 }

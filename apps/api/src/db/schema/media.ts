@@ -11,6 +11,8 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
+import { users } from "./auth.js";
+
 export const mediaType = pgEnum("media_type", ["anime", "manga"]);
 
 /** Anime and manga titles, cached from AniList. */
@@ -57,9 +59,14 @@ export const media = pgTable(
     anilistScore: smallint(), // 0-100
     popularity: integer(),
     isAdult: boolean().notNull().default(false),
-    // Club review stats, maintained by a trigger on reviews (migration 0004).
+    // Club review stats, maintained by a trigger on reviews (migration 0004). They feed
+    // the suggestions; the verdict shown as the club's is the lead's, below.
     clubReviewCount: integer().notNull().default(0),
     clubScoreSum: integer().notNull().default(0),
+    // The club verdict, given by a club lead: 1-4 like reviews.score (lib/rating.ts).
+    clubVerdict: smallint(),
+    clubVerdictById: text().references(() => users.id, { onDelete: "set null" }),
+    clubVerdictAt: timestamp({ withTimezone: true }),
     syncedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true })
@@ -74,6 +81,7 @@ export const media = pgTable(
       "media_club_stats_non_negative",
       sql`${t.clubReviewCount} >= 0 and ${t.clubScoreSum} >= 0`,
     ),
+    check("media_club_verdict_range", sql`${t.clubVerdict} between 1 and 4`),
     index().using("gin", t.genres),
     index().using("gin", t.tags),
     // Trigram indexes make `ilike '%term%'` title search fast (needs pg_trgm, migration 0001).
