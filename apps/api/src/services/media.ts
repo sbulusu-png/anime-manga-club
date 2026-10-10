@@ -14,7 +14,12 @@ import {
 
 import type { Db } from "../db/client.js";
 import { media, users } from "../db/schema/index.js";
-import { type AnilistClient, type Character, toMediaRow } from "../lib/anilist.js";
+import {
+  type AnilistClient,
+  type Character,
+  type WhereToLink,
+  toMediaRow,
+} from "../lib/anilist.js";
 import { type Cursor, decodeCursor, encodeCursor } from "../lib/cursor.js";
 import { AppError } from "../lib/errors.js";
 import { type Rating, ratingToValue, valueToRating } from "../lib/rating.js";
@@ -341,16 +346,18 @@ export async function refreshMedia(db: Db, anilist: AnilistClient, row: MediaRow
   }
 }
 
-const characterCache = new TtlCache<Character[]>(24 * 60 * 60 * 1000);
+const extrasCache = new TtlCache<TitleExtras>(24 * 60 * 60 * 1000);
 
-/** Main and supporting characters, cached for a day. */
-export async function getCharacters(anilist: AnilistClient, anilistId: number) {
+type TitleExtras = Awaited<ReturnType<AnilistClient["extras"]>>;
+
+/** A title's characters and where to watch or read it, from AniList (cached a day). */
+export async function getTitleExtras(anilist: AnilistClient, anilistId: number) {
   const key = String(anilistId);
-  const cached = characterCache.get(key);
+  const cached = extrasCache.get(key);
   if (cached) return cached;
-  const characters = await anilist.characters(anilistId);
-  characterCache.set(key, characters);
-  return characters;
+  const extras = await anilist.extras(anilistId);
+  extrasCache.set(key, extras);
+  return extras;
 }
 
 /** Public JSON for a title in lists. */
@@ -430,7 +437,11 @@ export async function setClubVerdict(
 }
 
 /** Public JSON for a title's own page. */
-export function toMediaDetail(row: MediaRow, characters: Character[], giver: VerdictGiver | null) {
+export function toMediaDetail(
+  row: MediaRow,
+  { characters, links }: { characters: Character[]; links: WhereToLink[] },
+  giver: VerdictGiver | null,
+) {
   const summary = toMediaSummary(row);
   return {
     ...summary,
@@ -447,6 +458,7 @@ export function toMediaDetail(row: MediaRow, characters: Character[], giver: Ver
     volumes: row.volumes,
     anilistUrl: `https://anilist.co/${row.type}/${row.anilistId}`,
     characters,
+    links,
     syncedAt: row.syncedAt,
   };
 }

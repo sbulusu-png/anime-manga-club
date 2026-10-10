@@ -132,6 +132,44 @@ export function fakeAnilist({ catalog = [], failWith, offline, lists = {} }: Fak
           json({
             data: {
               Media: {
+                externalLinks: [
+                  {
+                    site: "Crunchyroll",
+                    url: `https://www.crunchyroll.com/series/${String(found.id)}`,
+                    type: "STREAMING",
+                    language: null,
+                    color: "#F88B24",
+                    icon: "https://s4.anilist.co/file/anilistcdn/link/icon/5-AWN2pVlluCOO.png",
+                    isDisabled: false,
+                  },
+                  {
+                    site: "Official Site",
+                    url: "https://example.com/official",
+                    type: "INFO",
+                    language: "Japanese",
+                    color: null,
+                    icon: null,
+                    isDisabled: false,
+                  },
+                  {
+                    site: "Twitter",
+                    url: "https://twitter.com/example",
+                    type: "SOCIAL",
+                    language: "Japanese",
+                    color: "#1D9BF0",
+                    icon: null,
+                    isDisabled: false,
+                  },
+                  {
+                    site: "Old Stream",
+                    url: "https://old.example.com",
+                    type: "STREAMING",
+                    language: null,
+                    color: null,
+                    icon: null,
+                    isDisabled: true,
+                  },
+                ],
                 characters: {
                   edges: [
                     {

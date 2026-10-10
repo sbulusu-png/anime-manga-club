@@ -36,6 +36,15 @@ export interface Character {
   role: string | null;
 }
 
+export interface WhereToLink {
+  site: string;
+  url: string;
+  kind: "stream" | "official";
+  language: string | null;
+  color: string | null;
+  icon: string | null;
+}
+
 export interface MediaDetail extends MediaSummary {
   club: ClubStats & {
     /** The lead who gave it (null if none, or they've left the club). */
@@ -51,6 +60,11 @@ export interface MediaDetail extends MediaSummary {
   volumes: number | null;
   anilistUrl: string;
   characters: Character[];
+  /**
+   * Official places to watch or read it, and its official site (from AniList). Missing
+   * in copies of the page data cached before links existed.
+   */
+  links?: WhereToLink[];
   syncedAt: string;
 }
 

@@ -13,7 +13,7 @@ import {
   MEDIA_KINDS,
   MEDIA_SORTS,
   discoverMedia,
-  getCharacters,
+  getTitleExtras,
   getMedia,
   getOrImportByAnilistId,
   isStale,
@@ -159,7 +159,8 @@ export function mediaRoutes({ db, anilist, isTrustedProxy }: MediaRouteDeps) {
         "/:id",
         describeRoute({
           tags: ["Catalog"],
-          summary: "One title with synopsis, tags, characters and the club verdict",
+          summary:
+            "One title with synopsis, tags, characters, where to watch or read it, and the club verdict",
         }),
         validate("param", idParam),
         async (c) => {
@@ -173,16 +174,16 @@ export function mediaRoutes({ db, anilist, isTrustedProxy }: MediaRouteDeps) {
             });
           }
 
-          const [characters, giver] = await Promise.all([
-            // Characters are a nice-to-have: the page still loads if AniList is down.
-            getCharacters(anilist, row.anilistId).catch((err: unknown) => {
-              c.get("log").warn({ err, mediaId: row.id }, "could not load characters");
-              return [];
+          const [extras, giver] = await Promise.all([
+            // Characters and links are nice-to-haves: the page still loads if AniList is down.
+            getTitleExtras(anilist, row.anilistId).catch((err: unknown) => {
+              c.get("log").warn({ err, mediaId: row.id }, "could not load characters and links");
+              return { characters: [], links: [] };
             }),
             verdictGiver(db, row),
           ]);
 
-          return c.json({ item: toMediaDetail(row, characters, giver) });
+          return c.json({ item: toMediaDetail(row, extras, giver) });
         },
       )
 

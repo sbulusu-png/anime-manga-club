@@ -9,6 +9,7 @@ import { MediaCard, formatLabel } from "@/components/media-card";
 import { ClubVerdict } from "@/components/media/club-verdict";
 import { ListControl } from "@/components/media/list-control";
 import { ReviewEditor } from "@/components/media/review-editor";
+import { WhereTo } from "@/components/media/where-to";
 import { Synopsis } from "@/components/media/synopsis";
 import { ReviewCard } from "@/components/review-card";
 import { SEASONS, STATUSES } from "@/lib/browse";
@@ -227,6 +228,8 @@ export default async function MediaPage({ params }: Props) {
           </section>
 
           <ClubVerdict mediaId={media.id} club={media.club} canEdit={user?.role === "admin"} wide />
+
+          <WhereTo kind={media.kind} links={media.links ?? []} />
 
           {media.tags.length > 0 && (
             <section aria-labelledby="tags-heading" className="flex flex-col gap-2">

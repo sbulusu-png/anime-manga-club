@@ -63,7 +63,9 @@ const BY_IDS_QUERY = `
   }
 `;
 
-const CHARACTERS_QUERY = `
+// What a title's page needs from AniList beyond the catalog row: its characters, and
+// the official places to watch or read it.
+const EXTRAS_QUERY = `
   query ($id: Int!, $perPage: Int!) {
     Media(id: $id) {
       characters(sort: [ROLE, RELEVANCE], perPage: $perPage) {
@@ -72,6 +74,7 @@ const CHARACTERS_QUERY = `
           node { id name { full native } image { large } }
         }
       }
+      externalLinks { site url type language color icon isDisabled }
     }
   }
 `;
@@ -142,10 +145,22 @@ const pageSchema = z.object({
   data: z.object({ Page: z.object({ media: z.array(anilistMediaSchema) }) }),
 });
 const byIdSchema = z.object({ data: z.object({ Media: anilistMediaSchema.nullable() }) });
-const charactersSchema = z.object({
+const externalLinkSchema = z.object({
+  site: z.string(),
+  url: z.string().nullable(),
+  type: z.string().nullable(),
+  language: z.string().nullable(),
+  color: z.string().nullable(),
+  icon: z.string().nullable(),
+  isDisabled: z.boolean().nullable(),
+});
+type ExternalLink = z.infer<typeof externalLinkSchema>;
+
+const extrasSchema = z.object({
   data: z.object({
     Media: z
       .object({
+        externalLinks: z.array(externalLinkSchema).nullable().optional(),
         characters: z.object({
           edges: z.array(
             z.object({
@@ -199,6 +214,60 @@ export interface Character {
   nativeName: string | null;
   imageUrl: string | null;
   role: string | null; // MAIN, SUPPORTING, BACKGROUND
+}
+
+/** An official place to watch or read a title, or its official site. */
+export interface WhereToLink {
+  site: string;
+  url: string;
+  /** "stream": watch or read it there; "official": the official or publisher site. */
+  kind: "stream" | "official";
+  /** The language it's offered in, if AniList says (e.g. "English", "Japanese"). */
+  language: string | null;
+  /** The site's brand colour, e.g. "#F88B24". */
+  color: string | null;
+  /** The site's small logo, on AniList's image host. */
+  icon: string | null;
+}
+
+const httpUrl = (value: string | null) => {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * AniList's links for a title, cut down to the official places to watch or read it and
+ * its official site. Social media and disabled links are left out, and anything that
+ * isn't a plain web link is dropped (these URLs end up in our pages).
+ */
+export function toWhereToLinks(links: readonly ExternalLink[]): WhereToLink[] {
+  const seen = new Set<string>();
+  const result: WhereToLink[] = [];
+  for (const link of links) {
+    if (link.isDisabled) continue;
+    const kind = link.type === "STREAMING" ? "stream" : link.type === "INFO" ? "official" : null;
+    const url = httpUrl(link.url);
+    // One link per site and language (AniList sometimes lists a series page and a
+    // chapters page; two languages can share one address).
+    const key = `${kind}|${link.site}|${link.language ?? ""}`;
+    if (!kind || !url || seen.has(key)) continue;
+    seen.add(key);
+    const icon = httpUrl(link.icon);
+    result.push({
+      site: link.site,
+      url,
+      kind,
+      language: link.language,
+      color: link.color && /^#[0-9a-f]{6}$/i.test(link.color) ? link.color : null,
+      icon: icon && new URL(icon).hostname === "s4.anilist.co" ? icon : null,
+    });
+  }
+  return result;
 }
 
 export interface AnilistClientOptions {
@@ -324,18 +393,25 @@ export function createAnilistClient({
       return json === null ? [] : parse(pageSchema, json).data.Page.media;
     },
 
-    /** Main characters first, then supporting. */
-    async characters(id: number, perPage = 12): Promise<Character[]> {
-      const json = await query({ query: CHARACTERS_QUERY, variables: { id, perPage } });
-      if (json === null) return [];
-      const edges = parse(charactersSchema, json).data.Media?.characters.edges ?? [];
-      return edges.map(({ role, node }) => ({
+    /**
+     * A title's characters (main first, then supporting) and where to watch or read
+     * it, in one request.
+     */
+    async extras(
+      id: number,
+      perPage = 12,
+    ): Promise<{ characters: Character[]; links: WhereToLink[] }> {
+      const json = await query({ query: EXTRAS_QUERY, variables: { id, perPage } });
+      if (json === null) return { characters: [], links: [] };
+      const found = parse(extrasSchema, json).data.Media;
+      const characters = (found?.characters.edges ?? []).map(({ role, node }) => ({
         anilistId: node.id,
         name: node.name.full ?? node.name.native ?? "Unknown",
         nativeName: node.name.native,
         imageUrl: node.image.large,
         role,
       }));
+      return { characters, links: toWhereToLinks(found?.externalLinks ?? []) };
     },
   };
 }
