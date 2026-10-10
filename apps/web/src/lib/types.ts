@@ -41,6 +41,8 @@ export interface MediaDetail extends MediaSummary {
     /** The lead who gave it (null if none, or they've left the club). */
     givenBy: { username: string | null; displayUsername: string | null } | null;
     givenAt: string | null;
+    /** The lead's reason for the verdict, if they gave one. */
+    note: string | null;
   };
   malId: number | null;
   synopsis: string | null;

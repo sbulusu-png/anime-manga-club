@@ -67,6 +67,8 @@ export const media = pgTable(
     clubVerdict: smallint(),
     clubVerdictById: text().references(() => users.id, { onDelete: "set null" }),
     clubVerdictAt: timestamp({ withTimezone: true }),
+    // The lead's reason for it, shown under the verdict (optional).
+    clubVerdictNote: text(),
     syncedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true })

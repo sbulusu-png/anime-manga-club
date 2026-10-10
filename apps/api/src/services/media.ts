@@ -54,9 +54,9 @@ function kindCondition(kind: MediaKind): SQL {
 
 // Lists of titles only show cards, so they skip the long text columns: half the bytes
 // (and about half the query time) for a page of results or 300 suggestion candidates.
-const { synopsis, searchKey, synonyms, ...cardColumns } = getTableColumns(media);
+const { synopsis, searchKey, synonyms, clubVerdictNote, ...cardColumns } = getTableColumns(media);
 export const CARD_COLUMNS = cardColumns;
-export type CardRow = Omit<MediaRow, "synopsis" | "searchKey" | "synonyms">;
+export type CardRow = Omit<MediaRow, "synopsis" | "searchKey" | "synonyms" | "clubVerdictNote">;
 export const MEDIA_SORTS = ["popularity", "score", "club", "newest", "title"] as const;
 export type MediaSort = (typeof MEDIA_SORTS)[number];
 
@@ -401,22 +401,27 @@ export async function verdictGiver(db: Db, row: MediaRow): Promise<VerdictGiver 
   return giver ?? null;
 }
 
-/** A club lead gives (or changes) a title's club verdict; null removes it. */
+/**
+ * A club lead gives (or changes) a title's club verdict, with an optional note saying
+ * why; a null verdict removes both.
+ */
 export async function setClubVerdict(
   db: Db,
   mediaId: number,
   verdict: Rating | null,
   leadId: string,
+  note: string | null = null,
 ): Promise<MediaRow | null> {
   const [row] = await db
     .update(media)
     .set(
       verdict === null
-        ? { clubVerdict: null, clubVerdictById: null, clubVerdictAt: null }
+        ? { clubVerdict: null, clubVerdictById: null, clubVerdictAt: null, clubVerdictNote: null }
         : {
             clubVerdict: ratingToValue(verdict),
             clubVerdictById: leadId,
             clubVerdictAt: new Date(),
+            clubVerdictNote: note,
           },
     )
     .where(and(eq(media.id, mediaId), eq(media.isAdult, false)))
@@ -433,6 +438,7 @@ export function toMediaDetail(row: MediaRow, characters: Character[], giver: Ver
       ...summary.club,
       givenBy: giver,
       givenAt: row.clubVerdict === null ? null : (row.clubVerdictAt?.toISOString() ?? null),
+      note: row.clubVerdict === null ? null : row.clubVerdictNote,
     },
     malId: row.malId,
     synopsis: row.synopsis,

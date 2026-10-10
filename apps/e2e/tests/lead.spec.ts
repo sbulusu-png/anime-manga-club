@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import { LEAD_STATE, accounts } from "./accounts";
@@ -62,28 +63,44 @@ test("a club lead gives a title its club verdict, changes it and removes it", as
   // Not checking the starting text: after an interrupted run, the site may briefly show
   // a cached copy. Each click below refreshes it.
   const verdict = page.getByRole("region", { name: "Club verdict" });
-  await verdict.getByRole("button", { name: "Go for it" }).click();
-  await expect(verdict.getByRole("button", { name: "Go for it" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  // The radios are visually hidden inside their labels, so click the label, as people do.
+  const pickVerdict = (name: string) =>
+    verdict.locator("label", { has: page.getByRole("radio", { name }) }).click();
+  const saveButton = verdict.getByRole("button", { name: /Give this verdict|Save changes/ });
+  await pickVerdict("Go for it");
+  await verdict.getByLabel(/Why this verdict/).fill("E2E: sharp writing,\nand it never drags.");
+  await saveButton.click();
+  await expect(verdict.getByText("Saved. The club can see it now.")).toBeVisible();
   const { lead } = accounts();
   await expect(verdict.getByText(`Given by @${lead.username}`, { exact: false })).toBeVisible();
+  await expect(verdict.getByRole("blockquote")).toHaveText(
+    "E2E: sharp writing,\nand it never drags.",
+  );
 
-  // Everyone else sees it, without the lead's buttons.
+  const { violations } = await new AxeBuilder({ page })
+    .include("#club-verdict-heading")
+    .include("section:has(#club-verdict-heading)")
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(violations.map((v) => v.id)).toEqual([]);
+
+  // Everyone else sees it and the reason, without the lead's form.
   const visitor = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const guest = await visitor.newPage();
   await guest.goto(path);
   const seen = guest.getByRole("region", { name: "Club verdict" });
   await expect(seen.getByText("Go for it", { exact: true })).toBeVisible();
+  await expect(seen.getByText(/E2E: sharp writing/)).toBeVisible();
+  await expect(seen.getByRole("radio")).toHaveCount(0);
   await expect(seen.getByRole("button")).toHaveCount(0);
   await visitor.close();
 
-  await verdict.getByRole("button", { name: "Perfection" }).click();
-  await expect(verdict.getByRole("button", { name: "Perfection" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  // Change it; then take it back.
+  await pickVerdict("Perfection");
+  await saveButton.click();
+  await expect(verdict.getByText("Saved. The club can see it now.")).toBeVisible();
+  await expect(verdict.getByText("Perfection", { exact: true }).first()).toBeVisible();
   await verdict.getByRole("button", { name: "Remove the club verdict" }).click();
   await expect(verdict.getByText("The club lead hasn't given a verdict yet.")).toBeVisible();
+  await expect(verdict.getByRole("blockquote")).toHaveCount(0);
 });

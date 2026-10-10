@@ -26,7 +26,24 @@ import {
   verdictGiver,
 } from "../services/media.js";
 import { similarTo, toRecommendationJson } from "../services/recommendations.js";
+import { cleanReviewBody } from "./reviews.js";
 import type { AppEnv } from "../types.js";
+
+export const VERDICT_NOTE_MAX = 1000;
+
+// The lead's reason for the verdict: cleaned like a review; empty means no note.
+const verdictBody = z.strictObject({
+  verdict: z.enum(RATINGS),
+  note: z
+    .string()
+    .max(VERDICT_NOTE_MAX * 2) // reject absurd payloads before cleaning
+    .transform(cleanReviewBody)
+    .pipe(
+      z.string().max(VERDICT_NOTE_MAX, `must be at most ${String(VERDICT_NOTE_MAX)} characters`),
+    )
+    .transform((note) => note || null)
+    .optional(),
+});
 
 interface MediaRouteDeps {
   db: Db;
@@ -174,23 +191,19 @@ export function mediaRoutes({ db, anilist, isTrustedProxy }: MediaRouteDeps) {
         "/:id/club-verdict",
         describeRoute({
           tags: ["Club"],
-          summary: "Give or change a title's club verdict (club leads)",
+          summary: "Give or change a title's club verdict, with an optional note (club leads)",
           security: [{ session: [] }],
         }),
         requireRole("admin"),
         validate("param", idParam),
-        validate("json", z.strictObject({ verdict: z.enum(RATINGS) })),
+        validate("json", verdictBody),
         async (c) => {
           const lead = c.get("user");
           if (!lead) throw new Error("unreachable");
-          const row = await setClubVerdict(
-            db,
-            c.req.valid("param").id,
-            c.req.valid("json").verdict,
-            lead.id,
-          );
+          const { verdict, note = null } = c.req.valid("json");
+          const row = await setClubVerdict(db, c.req.valid("param").id, verdict, lead.id, note);
           if (!row) throw notFound();
-          return c.json({ club: { verdict: c.req.valid("json").verdict } });
+          return c.json({ club: { verdict, note } });
         },
       )
       .delete(

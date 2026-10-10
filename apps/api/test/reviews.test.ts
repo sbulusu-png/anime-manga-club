@@ -293,7 +293,12 @@ describe("members' verdicts", () => {
 
   it("don't set the club verdict (a club lead does)", async () => {
     await write(alice, bleach, "perfection");
-    expect(await clubOf(bleach)).toEqual({ verdict: null, givenBy: null, givenAt: null });
+    expect(await clubOf(bleach)).toEqual({
+      verdict: null,
+      givenBy: null,
+      givenAt: null,
+      note: null,
+    });
   });
 
   it("stay correct when a member deletes their account", async () => {

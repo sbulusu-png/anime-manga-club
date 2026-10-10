@@ -85,6 +85,13 @@
       "when": 1791617739430,
       "tag": "0011_lead_club_verdict",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791644115561,
+      "tag": "0012_club_verdict_note",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "media" ADD COLUMN "club_verdict_note" text;

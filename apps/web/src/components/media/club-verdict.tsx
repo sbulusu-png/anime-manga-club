@@ -14,7 +14,10 @@ const givenOn = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Kolkata",
 });
 
-/** The club's verdict on a title, given by a club lead; leads can change it here. */
+/**
+ * The club's verdict on a title, given by a club lead with their reason; leads can
+ * change it here.
+ */
 export function ClubVerdict({
   mediaId,
   club,
@@ -45,6 +48,11 @@ export function ClubVerdict({
         <div className="flex flex-col items-start gap-2">
           <VerdictBadge rating={club.verdict} className="px-4 py-1.5 text-base" />
           <p className="text-sm text-muted">{RATING_INFO[club.verdict].blurb}</p>
+          {club.note ? (
+            <blockquote className="w-full whitespace-pre-line rounded-xl border-l-4 border-accent bg-surface-2 px-4 py-3 text-sm text-ink">
+              {club.note}
+            </blockquote>
+          ) : null}
           {giver || club.givenAt ? (
             <p className="text-xs text-muted">
               Given
@@ -66,7 +74,9 @@ export function ClubVerdict({
       ) : (
         <p className="text-sm text-muted">The club lead hasn&apos;t given a verdict yet.</p>
       )}
-      {canEdit ? <ClubVerdictEditor mediaId={mediaId} current={club.verdict} /> : null}
+      {canEdit ? (
+        <ClubVerdictEditor mediaId={mediaId} current={club.verdict} currentNote={club.note} />
+      ) : null}
     </section>
   );
 }
