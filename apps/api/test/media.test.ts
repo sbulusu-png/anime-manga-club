@@ -263,7 +263,8 @@ describe("GET /api/media/:id", () => {
       synopsis: "Synopsis for 5.",
       anilistUrl: "https://anilist.co/anime/5",
       characters: [{ name: "Hero of 5", role: "MAIN" }],
-      // Official places only: social and disabled links are left out.
+      // Official places that work in India only: social and disabled links are left
+      // out, and so is Hulu (US only).
       links: [
         { site: "Crunchyroll", kind: "stream", language: null, color: "#F88B24" },
         { site: "Official Site", kind: "official", language: "Japanese" },

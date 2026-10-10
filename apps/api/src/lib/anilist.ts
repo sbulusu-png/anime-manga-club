@@ -270,6 +270,32 @@ export function toWhereToLinks(links: readonly ExternalLink[]): WhereToLink[] {
   return result;
 }
 
+/**
+ * Anime streaming services that work in India, where the club is (checked October 2026).
+ * AniList doesn't say where each service works, and links to ones that don't either
+ * fail or redirect elsewhere (Hulu and Disney+ send Indian visitors to JioHotstar), so
+ * only these are shown. Each title's own availability on them still varies.
+ */
+export const ANIME_STREAMING_IN_INDIA: ReadonlySet<string> = new Set([
+  "Crunchyroll",
+  "Netflix",
+  "Amazon Prime Video",
+  "Prime Video",
+  "Apple TV+",
+  "YouTube",
+]);
+
+/**
+ * Where to watch a title from India: the anime streaming services that work here, plus
+ * official sites. Reading sites (manga, manhwa, manhua) are web services kept as they are.
+ */
+export function availableInIndia(type: "anime" | "manga", links: WhereToLink[]): WhereToLink[] {
+  if (type !== "anime") return links;
+  return links.filter(
+    (link) => link.kind === "official" || ANIME_STREAMING_IN_INDIA.has(link.site),
+  );
+}
+
 export interface AnilistClientOptions {
   fetch?: typeof fetch;
   /** Shared budget across the whole API; AniList allows ~30-90 requests/minute. */

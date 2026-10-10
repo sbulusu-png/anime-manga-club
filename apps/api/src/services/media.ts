@@ -18,6 +18,7 @@ import {
   type AnilistClient,
   type Character,
   type WhereToLink,
+  availableInIndia,
   toMediaRow,
 } from "../lib/anilist.js";
 import { type Cursor, decodeCursor, encodeCursor } from "../lib/cursor.js";
@@ -458,7 +459,7 @@ export function toMediaDetail(
     volumes: row.volumes,
     anilistUrl: `https://anilist.co/${row.type}/${row.anilistId}`,
     characters,
-    links,
+    links: availableInIndia(row.type, links),
     syncedAt: row.syncedAt,
   };
 }

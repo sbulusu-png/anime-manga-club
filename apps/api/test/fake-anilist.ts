@@ -143,6 +143,15 @@ export function fakeAnilist({ catalog = [], failWith, offline, lists = {} }: Fak
                     isDisabled: false,
                   },
                   {
+                    site: "Hulu",
+                    url: `https://www.hulu.com/series/${String(found.id)}`,
+                    type: "STREAMING",
+                    language: null,
+                    color: "#1CE783",
+                    icon: null,
+                    isDisabled: false,
+                  },
+                  {
                     site: "Official Site",
                     url: "https://example.com/official",
                     type: "INFO",

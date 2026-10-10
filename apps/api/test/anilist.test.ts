@@ -4,6 +4,7 @@ import {
   type AnilistMedia,
   cleanDescription,
   toMediaRow,
+  availableInIndia,
   toWhereToLinks,
 } from "../src/lib/anilist.js";
 
@@ -135,5 +136,36 @@ describe("toWhereToLinks", () => {
       link({ color: "red; background: url(x)", icon: "https://evil.example.com/icon.png" }),
     ]);
     expect(cleaned).toMatchObject({ color: null, icon: null });
+  });
+});
+
+describe("availableInIndia", () => {
+  const where = (site: string, kind: "stream" | "official" = "stream") => ({
+    site,
+    url: `https://${site.toLowerCase().replace(/\W/g, "")}.example.com`,
+    kind,
+    language: null,
+    color: null,
+    icon: null,
+  });
+
+  it("keeps anime streaming services that work in India, and official sites", () => {
+    const links = [
+      where("Crunchyroll"),
+      where("Hulu"),
+      where("Disney Plus"),
+      where("Netflix"),
+      where("Official Site", "official"),
+    ];
+    expect(availableInIndia("anime", links).map((l) => l.site)).toEqual([
+      "Crunchyroll",
+      "Netflix",
+      "Official Site",
+    ]);
+  });
+
+  it("leaves reading sites alone", () => {
+    const links = [where("MANGA Plus"), where("Tapas")];
+    expect(availableInIndia("manga", links)).toEqual(links);
   });
 });
