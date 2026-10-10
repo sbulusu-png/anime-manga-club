@@ -1,3 +1,4 @@
+import { TEST_EMAIL_DOMAIN, isAllowedEmail } from "./email-domains.js";
 import type { Logger } from "./logger.js";
 
 export interface Email {
@@ -11,27 +12,77 @@ export interface Mailer {
   send(email: Email): Promise<void>;
 }
 
-/** Sends through Resend's HTTP API (https://resend.com/docs/api-reference/emails/send-email). */
-export function resendMailer({
+/** "Anime Manga Club <club@mail.example.com>" (or just the address) as name and email. */
+export function parseSender(from: string): { name?: string; email: string } | null {
+  const named = /^\s*(.*?)\s*<\s*([^<>\s]+@[^<>\s]+)\s*>\s*$/.exec(from);
+  if (named) {
+    const [, name = "", email = ""] = named;
+    return name ? { name: name.replace(/^"|"$/g, ""), email } : { email };
+  }
+  const bare = from.trim();
+  return /^[^<>\s]+@[^<>\s]+$/.test(bare) ? { email: bare } : null;
+}
+
+/** Sends through Brevo's HTTP API (https://developers.brevo.com/reference/send-transac-email). */
+export function brevoMailer({
   apiKey,
   from,
   fetch: fetchImpl = fetch,
 }: {
   apiKey: string;
+  /** A sender verified in Brevo, e.g. "Anime Manga Club <club@mail.example.com>". */
   from: string;
   fetch?: typeof fetch;
 }): Mailer {
+  const sender = parseSender(from);
+  if (!sender) throw new Error(`EMAIL_FROM isn't an email address: ${from}`);
   return {
     async send(email) {
-      const res = await fetchImpl("https://api.resend.com/emails", {
+      const res = await fetchImpl("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from, ...email }),
+        headers: {
+          "api-key": apiKey,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          sender,
+          to: [{ email: email.to }],
+          subject: email.subject,
+          htmlContent: email.html,
+          textContent: email.text,
+        }),
         signal: AbortSignal.timeout(10_000),
       });
       if (!res.ok) {
-        throw new Error(`Resend rejected the email: ${res.status} ${await res.text()}`);
+        throw new Error(`Brevo rejected the email: ${res.status} ${await res.text()}`);
       }
+    },
+  };
+}
+
+/**
+ * Picks where each email goes. Test accounts' addresses (example.com) are only ever
+ * printed: sending to them would bounce and hurt the sending domain's reputation. With
+ * `alsoLog` (development), real emails are printed as well, so codes can be read there.
+ */
+export function routedMailer({
+  deliver,
+  log,
+  alsoLog,
+}: {
+  deliver: Mailer | null;
+  log: Mailer;
+  alsoLog: boolean;
+}): Mailer {
+  return {
+    async send(email) {
+      if (!deliver || isAllowedEmail(email.to, [TEST_EMAIL_DOMAIN])) {
+        await log.send(email);
+        return;
+      }
+      if (alsoLog) await log.send(email);
+      await deliver.send(email);
     },
   };
 }

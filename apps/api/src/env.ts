@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { DEFAULT_TRUSTED_PROXIES, createProxyMatcher } from "./lib/client-ip.js";
+import { parseSender } from "./lib/email.js";
 import { TEST_EMAIL_DOMAIN } from "./lib/email-domains.js";
 
 const optionalString = z
@@ -36,8 +37,13 @@ const envSchema = z
     GOOGLE_CLIENT_ID: optionalString,
     GOOGLE_CLIENT_SECRET: optionalString,
     /** Sends email (verification, password reset). Required in production. */
-    RESEND_API_KEY: optionalString,
-    EMAIL_FROM: z.string().trim().min(3).default("Anime Manga Club <onboarding@resend.dev>"),
+    /** Sends email through Brevo. Required in production. */
+    BREVO_API_KEY: optionalString,
+    /** The sender, verified in Brevo: "Anime Manga Club <club@mail.example.com>". */
+    EMAIL_FROM: optionalString.refine(
+      (from) => from === undefined || parseSender(from) !== null,
+      'must be an email address, like "Anime Manga Club <club@mail.example.com>"',
+    ),
     REQUIRE_EMAIL_VERIFICATION: z
       .enum(["true", "false"])
       .default("true")
@@ -85,9 +91,13 @@ const envSchema = z
     message: "is required in production (which email domains can join)",
     path: ["ALLOWED_EMAIL_DOMAINS"],
   })
-  .refine((env) => env.NODE_ENV !== "production" || Boolean(env.RESEND_API_KEY), {
+  .refine((env) => !env.BREVO_API_KEY || Boolean(env.EMAIL_FROM), {
+    message: "is required with BREVO_API_KEY (the sender verified in Brevo)",
+    path: ["EMAIL_FROM"],
+  })
+  .refine((env) => env.NODE_ENV !== "production" || Boolean(env.BREVO_API_KEY), {
     message: "is required in production (emails would silently go nowhere)",
-    path: ["RESEND_API_KEY"],
+    path: ["BREVO_API_KEY"],
   });
 
 export type Env = z.infer<typeof envSchema>;

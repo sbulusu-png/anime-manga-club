@@ -5,16 +5,15 @@ import { redirect } from "next/navigation";
 import { AuthCard, Divider, TEXT_LINK } from "@/components/auth/auth-card";
 import { GoogleButton } from "@/components/auth/google-button";
 import { SignUpForm } from "@/components/auth/sign-up-form";
-import { safeNext, signInHref, verifySignInHref } from "@/lib/safe-next";
+import { safeNext, signInHref } from "@/lib/safe-next";
 import type { SearchParams } from "@/lib/search-params";
-import { getCurrentUser, isSignInPending } from "@/lib/server-api";
+import { getCurrentUser } from "@/lib/server-api";
 
 export const metadata: Metadata = { title: "Join the club" };
 
 export default async function SignUpPage({ searchParams }: { searchParams: SearchParams }) {
   const next = safeNext((await searchParams).next);
   if (await getCurrentUser()) redirect(next as Route);
-  if (await isSignInPending()) redirect(verifySignInHref(next));
 
   return (
     <AuthCard

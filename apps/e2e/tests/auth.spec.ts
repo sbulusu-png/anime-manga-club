@@ -43,6 +43,16 @@ test("a new member signs up, confirms their email and signs in with their userna
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
   expect(violations).toEqual([]);
+
+  // Leaving without the code counts as signed out: "Sign in" shows the form, and
+  // members-only pages send them there too.
+  await page.getByRole("banner").getByRole("link", { name: "Sign in" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+  await page.goto("/for-you");
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Ffor-you/);
+  await page.goto("/verify-sign-in?next=/for-you");
+  await page.waitForLoadState("networkidle");
+
   await setSignInCode(email, "135790");
   await page.getByLabel("Sign-in code").fill("000000");
   await page.getByRole("button", { name: "Verify and sign in" }).click();

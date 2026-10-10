@@ -6,9 +6,9 @@ import { AuthCard, Divider, TEXT_LINK } from "@/components/auth/auth-card";
 import { FormAlert } from "@/components/auth/fields";
 import { GoogleButton } from "@/components/auth/google-button";
 import { SignInForm } from "@/components/auth/sign-in-form";
-import { safeNext, verifySignInHref } from "@/lib/safe-next";
+import { safeNext } from "@/lib/safe-next";
 import { type SearchParams, param } from "@/lib/search-params";
-import { getCurrentUser, isSignInPending } from "@/lib/server-api";
+import { getCurrentUser } from "@/lib/server-api";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -32,7 +32,6 @@ export default async function SignInPage({ searchParams }: { searchParams: Searc
   const params = await searchParams;
   const next = safeNext(params.next);
   if (await getCurrentUser()) redirect(next as Route);
-  if (await isSignInPending()) redirect(verifySignInHref(next));
   const error = param(params.error);
   const signUpHref = next === "/" ? "/sign-up" : `/sign-up?next=${encodeURIComponent(next)}`;
 

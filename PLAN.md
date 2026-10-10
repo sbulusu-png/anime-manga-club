@@ -81,7 +81,7 @@ Installed Claude plugins used: **gsap-skills** (all frontend motion), **graphify
 
 ### 1.7 Hardening ✅
 
-- Email: verification (required for email/password members), password reset (1-hour links, signs out every device), and a heads-up to the owner when someone signs up with their email; Resend in production, printed to the log in development
+- Email: verification (required for email/password members), password reset (1-hour links, signs out every device), and a heads-up to the owner when someone signs up with their email; Brevo in production, printed to the log in development
 - No account enumeration: sign-up with a taken email and reset requests for unknown emails look identical to real ones
 - Breached passwords rejected (Have I Been Pwned, k-anonymity; fails closed)
 - Sessions checked against the database on every request, so sign-out, reset, bans and deletion apply instantly (found and fixed: the 5-minute cookie cache kept revoked sessions alive)

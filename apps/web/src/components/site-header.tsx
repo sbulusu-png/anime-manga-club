@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { getCurrentUser, isSignInPending } from "@/lib/server-api";
+import { getCurrentUser } from "@/lib/server-api";
 
 import { MobileNav } from "./mobile-nav";
 import { NavLinks } from "./nav-links";
@@ -9,7 +9,7 @@ import { UserMenu } from "./user-menu";
 import { UsernameNudge } from "./username-nudge";
 
 export async function SiteHeader() {
-  const [user, pending] = await Promise.all([getCurrentUser(), isSignInPending()]);
+  const user = await getCurrentUser();
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur-md">
@@ -37,10 +37,10 @@ export async function SiteHeader() {
             <UserMenu user={user} />
           ) : (
             <Link
-              href={pending ? "/verify-sign-in" : "/sign-in"}
+              href="/sign-in"
               className="btn-comic hidden whitespace-nowrap rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-ink sm:inline-block"
             >
-              {pending ? "Enter your code" : "Sign in"}
+              Sign in
             </Link>
           )}
           <ThemeToggle />

@@ -48,7 +48,7 @@ flowchart LR
   PG[("PostgreSQL 18 on Neon<br/>triggers keep club counts exact")]
   AniList["AniList GraphQL<br/>titles, covers, characters"]
   Google["Google sign-in"]
-  Resend["Resend<br/>email"]
+  Brevo["Brevo<br/>email"]
   HIBP["Pwned Passwords<br/>(k-anonymity)"]
 
   UI -- "HTML / RSC" --> Pages
@@ -58,7 +58,7 @@ flowchart LR
   DB --> PG
   Services --> AniList
   Auth --> Google
-  Auth --> Resend
+  Auth --> Brevo
   Auth --> HIBP
 ```
 
@@ -72,7 +72,7 @@ The layering above comes from a [graphify](https://github.com/safishamsi/graphif
 | API      | Hono 4 on Node.js 24, Zod 4 validation, OpenAPI docs at `/api/docs`                  |
 | Auth     | Better Auth 1.7 (email/password, Google, username, admin roles)                      |
 | Database | PostgreSQL 18 on Neon, Drizzle ORM and drizzle-kit migrations                        |
-| Email    | Resend                                                                               |
+| Email    | Brevo                                                                                |
 | Data     | AniList GraphQL API                                                                  |
 | Tests    | Vitest 5 with in-memory PGlite, Playwright + axe-core, Lighthouse                    |
 | Tooling  | TypeScript 6 (strict), ESLint 10, Prettier, npm workspaces, GitHub Actions           |
@@ -100,7 +100,7 @@ design/  An early HTML prototype of the banner
 Requirements: Node.js 24 LTS and a PostgreSQL database (a free Neon project works).
 
 1. `npm ci`
-2. Copy `.env.example` to `.env` and fill it in (database URLs, a Better Auth secret, and optionally Google and Resend keys). Without Resend, emails are printed to the API log.
+2. Copy `.env.example` to `.env` and fill it in (database URLs, a Better Auth secret, and optionally Google and Brevo keys). Without Brevo, emails are printed to the API log.
 3. `npm run db:migrate --workspace @amc/api`, then `npm run db:seed --workspace @amc/api` to load popular titles from AniList.
 4. `npm run dev` starts the API on port 4000 and the website on http://localhost:3000.
 5. To make yourself a club lead: `npm run user:set-role --workspace @amc/api -- <email or username> admin`.

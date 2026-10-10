@@ -16,7 +16,7 @@ npm run db:seed --workspace @amc/api   # 50 popular anime + 50 manga from AniLis
 npm run dev                  # http://localhost:4000
 ```
 
-Without `RESEND_API_KEY`, emails (verification, password reset) are printed to the server log instead of sent.
+Without `BREVO_API_KEY`, emails (sign-in codes, verification, password reset) are printed to the server log instead of sent. In development they're always printed too, so codes can be read there.
 
 ## Scripts (in `apps/api`)
 

@@ -17,7 +17,6 @@ describe("parseEnv", () => {
       WEB_ORIGIN: "http://localhost:3000",
       BETTER_AUTH_URL: "http://localhost:3000",
       CLUB_TIMEZONE: "Asia/Kolkata",
-      EMAIL_FROM: "Anime Manga Club <onboarding@resend.dev>",
       REQUIRE_EMAIL_VERIFICATION: true,
       TRUSTED_PROXIES: DEFAULT_TRUSTED_PROXIES,
       // Test accounts' example.com is added outside production.
@@ -27,7 +26,12 @@ describe("parseEnv", () => {
   });
 
   it("needs the university's email domains in production, and only those", () => {
-    const production = { ...required, NODE_ENV: "production", RESEND_API_KEY: "re_test" };
+    const production = {
+      ...required,
+      NODE_ENV: "production",
+      BREVO_API_KEY: "xkeysib-test",
+      EMAIL_FROM: "Club <club@mail.example.com>",
+    };
     expect(() => parseEnv(production)).toThrow(/ALLOWED_EMAIL_DOMAINS/);
     expect(
       parseEnv({ ...production, ALLOWED_EMAIL_DOMAINS: " @University.example , college.example " })
@@ -78,15 +82,23 @@ describe("parseEnv", () => {
     ).toEqual(["10.0.0.0/8", "100.64.0.0/10"]);
   });
 
-  it("requires a Resend key in production, but not in development", () => {
-    expect(() => parseEnv({ ...required, NODE_ENV: "production" })).toThrow(/RESEND_API_KEY/);
+  it("requires a Brevo key (and its sender) in production, but not in development", () => {
+    expect(() => parseEnv({ ...required, NODE_ENV: "production" })).toThrow(/BREVO_API_KEY/);
     const production = parseEnv({
       ...required,
       NODE_ENV: "production",
-      RESEND_API_KEY: "re_1",
+      BREVO_API_KEY: "xkeysib-1",
+      EMAIL_FROM: "club@mail.example.com",
       ALLOWED_EMAIL_DOMAINS: "university.example",
     });
     expect(production.NODE_ENV).toBe("production");
+  });
+
+  it("needs a real sender with a Brevo key", () => {
+    expect(() => parseEnv({ ...required, BREVO_API_KEY: "xkeysib-1" })).toThrow(/EMAIL_FROM/);
+    expect(() =>
+      parseEnv({ ...required, BREVO_API_KEY: "xkeysib-1", EMAIL_FROM: "Anime Manga Club" }),
+    ).toThrow(/EMAIL_FROM/);
   });
 
   it("can switch email verification off", () => {

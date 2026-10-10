@@ -6,7 +6,7 @@ import { createDb } from "./db/client.js";
 import { env } from "./env.js";
 import { createAnilistClient } from "./lib/anilist.js";
 import { createProxyMatcher } from "./lib/client-ip.js";
-import { type Mailer, logMailer, resendMailer } from "./lib/email.js";
+import { brevoMailer, logMailer, routedMailer } from "./lib/email.js";
 import { logger } from "./lib/logger.js";
 
 const database = createDb(env.DATABASE_URL, {
@@ -20,21 +20,19 @@ const google =
     : undefined;
 if (!google) logger.warn("GOOGLE_CLIENT_ID/SECRET not set: Google sign-in is disabled");
 
-const resend = env.RESEND_API_KEY
-  ? resendMailer({ apiKey: env.RESEND_API_KEY, from: env.EMAIL_FROM })
-  : null;
-const devLog = logMailer(logger);
+// env.ts guarantees EMAIL_FROM whenever there's a key.
+const brevo =
+  env.BREVO_API_KEY && env.EMAIL_FROM
+    ? brevoMailer({ apiKey: env.BREVO_API_KEY, from: env.EMAIL_FROM })
+    : null;
 // In development every email is also printed, so sign-in codes can be read from the log
-// even when Resend can't deliver yet (before the sending domain is verified).
-const mailer: Mailer = !resend
-  ? devLog
-  : env.NODE_ENV === "production"
-    ? resend
-    : {
-        send: (email) =>
-          Promise.all([devLog.send(email), resend.send(email)]).then(() => undefined),
-      };
-if (!env.RESEND_API_KEY) logger.warn("RESEND_API_KEY not set: emails are printed to this log");
+// even when the email can't be delivered.
+const mailer = routedMailer({
+  deliver: brevo,
+  log: logMailer(logger),
+  alsoLog: env.NODE_ENV !== "production",
+});
+if (!brevo) logger.warn("BREVO_API_KEY not set: emails are printed to this log");
 
 const auth = createAuth({
   db: database.db,

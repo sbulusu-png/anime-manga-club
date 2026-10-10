@@ -14,31 +14,34 @@ Files: [`Dockerfile`](Dockerfile), [`fly.toml`](fly.toml), and [`.dockerignore`]
 3. **Set the secrets.** Paste the values into your own terminal, never into chat or a file that gets committed:
 
    ```bash
-   fly secrets set --config apps/api/fly.toml DATABASE_URL=... DATABASE_URL_UNPOOLED=... BETTER_AUTH_SECRET=... BETTER_AUTH_URL=... WEB_ORIGIN=... GOOGLE_CLIENT_ID=... GOOGLE_CLIENT_SECRET=... RESEND_API_KEY=... EMAIL_FROM=...
+   fly secrets set --config apps/api/fly.toml DATABASE_URL=... DATABASE_URL_UNPOOLED=... BETTER_AUTH_SECRET=... BETTER_AUTH_URL=... WEB_ORIGIN=... GOOGLE_CLIENT_ID=... GOOGLE_CLIENT_SECRET=... BREVO_API_KEY=... EMAIL_FROM=... ALLOWED_EMAIL_DOMAINS=...
    ```
 
-   | Secret                                     | Value                                                                                                              |
-   | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-   | `DATABASE_URL`                             | Neon **pooled** connection string                                                                                  |
-   | `DATABASE_URL_UNPOOLED`                    | Neon **direct** connection string (used by migrations)                                                             |
-   | `BETTER_AUTH_SECRET`                       | The fresh value from step 1                                                                                        |
-   | `BETTER_AUTH_URL`, `WEB_ORIGIN`            | The public website URL, e.g. `https://your-site.vercel.app`                                                        |
-   | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Anime Manga Club OAuth client; add `https://<website>/api/auth/callback/google` as a redirect URI                  |
-   | `RESEND_API_KEY`, `EMAIL_FROM`             | Required in production. `EMAIL_FROM` must use a domain verified in Resend (`onboarding@resend.dev` only mails you) |
+   | Secret                                     | Value                                                                                             |
+   | ------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+   | `DATABASE_URL`                             | Neon **pooled** connection string                                                                 |
+   | `DATABASE_URL_UNPOOLED`                    | Neon **direct** connection string (used by migrations)                                            |
+   | `BETTER_AUTH_SECRET`                       | The fresh value from step 1                                                                       |
+   | `BETTER_AUTH_URL`, `WEB_ORIGIN`            | The public website URL, e.g. `https://your-site.vercel.app`                                       |
+   | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Anime Manga Club OAuth client; add `https://<website>/api/auth/callback/google` as a redirect URI |
+   | `BREVO_API_KEY`, `EMAIL_FROM`              | Required in production. `EMAIL_FROM` is a sender on a domain authenticated in Brevo (see below)   |
+   | `ALLOWED_EMAIL_DOMAINS`                    | The university's email domains, comma-separated, e.g. `uni.edu,uni.ac.in`                         |
 
    `NODE_ENV`, `PORT`, `LOG_LEVEL` and `CLUB_TIMEZONE` are already set in `fly.toml`. Don't set `API_PORT` on Fly.
 
-   Also set `ALLOWED_EMAIL_DOMAINS`: the university's email domains, comma-separated (e.g. `uni.edu,uni.ac.in`). Only those addresses and their subdomains can join, and the API won't start in production without it. Every sign-in also needs a 6-digit code sent by email, so email must work before launch.
+   Only addresses at `ALLOWED_EMAIL_DOMAINS` (and their subdomains) can join, and the API won't start in production without it. Every sign-in also needs a 6-digit code sent by email, so email must work before launch.
 
-## Sending email from your own domain
+## Sending email from your own domain (Brevo)
 
-Resend's test sender (`onboarding@resend.dev`) only delivers to your own inbox, so sign-in codes won't reach members until you verify a domain:
+Email goes through [Brevo](https://www.brevo.com) (free: 300 emails a day). University mail servers are strict, so send from a domain you've authenticated in Brevo, not from a Gmail address:
 
-1. In Resend, go to **Domains → Add domain** and enter a subdomain of yours, e.g. `mail.yourdomain.com`. A subdomain keeps the club's mail reputation separate from the main domain.
-2. Resend lists DNS records (a TXT record for SPF, a TXT record for DKIM, and an MX record). In Hostinger, open **Domains → your domain → DNS / Nameservers → DNS records** and add each one exactly as shown.
-3. Back in Resend, click **Verify**. It usually takes minutes, sometimes a few hours.
-4. Set `EMAIL_FROM="Anime Manga Club <club@mail.yourdomain.com>"` (Fly secret, and `.env` locally).
-5. Send yourself a sign-in code at a university address and check it lands in the inbox, not spam.
+1. **API key.** In Brevo, open **SMTP & API → API keys → Generate a new API key**. Put it in `.env` as `BREVO_API_KEY` (and as a Fly secret). Never paste it into chat.
+2. **Authenticate the domain.** Open **Senders, Domains & Dedicated IPs → Domains → Add a domain** and enter a subdomain, e.g. `mail.yourdomain.com`. A subdomain keeps the club's mail reputation separate from the main domain. Choose to add the records yourself.
+3. **Add the DNS records** Brevo lists (a `brevo-code` TXT record, the DKIM records and a DMARC record) at your registrar. On Name.com: **My Domains → the domain → Manage DNS Records**. In the **Host** field type only the part before your domain (for `brevo1._domainkey.mail.yourdomain.com`, type `brevo1._domainkey.mail`), because Name.com adds the domain itself.
+4. Back in Brevo, click **Authenticate this email domain**. It usually takes minutes, sometimes a few hours.
+5. **Add the sender.** Under **Senders → Add a sender**, add e.g. `club@mail.yourdomain.com` with the name "Anime Manga Club". On an authenticated domain no inbox is needed.
+6. Set `EMAIL_FROM="Anime Manga Club <club@mail.yourdomain.com>"` (`.env` and Fly secret).
+7. Sign in with a university address and check the code lands in the inbox, not spam.
 
 ## Google sign-in for everyone
 
