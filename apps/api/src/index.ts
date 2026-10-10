@@ -1,3 +1,5 @@
+import { Server as HttpServer } from "node:http";
+
 import { serve } from "@hono/node-server";
 
 import { createApp } from "./app.js";
@@ -63,6 +65,14 @@ const app = createApp({
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   logger.info(`API listening on http://localhost:${info.port}`);
 });
+
+// Keep idle connections open longer than the website's proxy does (Node's default is
+// 5s on both sides). Otherwise the proxy can reuse a connection just as the API closes
+// it, and that request fails with ECONNRESET ("Failed to proxy"), at random.
+if (server instanceof HttpServer) {
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
+}
 
 async function closeDatabaseAndExit(serverError?: Error) {
   let code = 0;
