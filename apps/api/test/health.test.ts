@@ -47,6 +47,19 @@ describe("GET /api/health", () => {
   });
 });
 
+describe("GET /api/health/live", () => {
+  it("answers without touching the database, so pings let it sleep", async () => {
+    const pingDatabase = vi.fn(() => Promise.reject(new Error("asleep")));
+    const { app } = makeApp(db, { pingDatabase });
+
+    const res = await app.request("/api/health/live");
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ status: "ok" });
+    expect(pingDatabase).not.toHaveBeenCalled();
+  });
+});
+
 describe("GET /api/health with a broken session store", () => {
   it("still answers, even when the request carries a session cookie", async () => {
     const { app, auth } = makeApp(db);

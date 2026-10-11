@@ -64,6 +64,14 @@ const envSchema = z
         (domains) => domains.every((d) => /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d)),
         "must be domains like uni.edu,uni.ac.in",
       ),
+    /**
+     * Shared with the website, which sends it with each visitor's IP (see lib/client-ip.ts).
+     * Required in production, where every request arrives through the website's host.
+     */
+    WEB_PROXY_SECRET: optionalString.refine(
+      (secret) => secret === undefined || secret.length >= 32,
+      "must be at least 32 characters",
+    ),
     TRUSTED_PROXIES: z
       .string()
       .optional()
@@ -94,6 +102,10 @@ const envSchema = z
   .refine((env) => !env.BREVO_API_KEY || Boolean(env.EMAIL_FROM), {
     message: "is required with BREVO_API_KEY (the sender verified in Brevo)",
     path: ["EMAIL_FROM"],
+  })
+  .refine((env) => env.NODE_ENV !== "production" || Boolean(env.WEB_PROXY_SECRET), {
+    message: "is required in production (the website's shared secret, for visitor IPs)",
+    path: ["WEB_PROXY_SECRET"],
   })
   .refine((env) => env.NODE_ENV !== "production" || Boolean(env.BREVO_API_KEY), {
     message: "is required in production (emails would silently go nowhere)",

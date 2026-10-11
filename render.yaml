@@ -1,0 +1,52 @@
+# Render Blueprint for the API (the website runs on Vercel). Setup: DEPLOY.md.
+# Secrets are entered in the Render Dashboard (sync: false), never in this file.
+services:
+  - type: web
+    name: anime-manga-club-api
+    runtime: docker
+    plan: free
+    region: singapore # next to the Neon database (ap-southeast-1)
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    # The free plan has no pre-deploy step, so migrations run as the server starts.
+    dockerCommand: node --enable-source-maps dist/scripts/serve.js
+    # The liveness check skips the database, so health checks let it sleep when idle.
+    healthCheckPath: /api/health/live
+    # Only the API's changes redeploy it (website-only commits don't).
+    buildFilter:
+      paths:
+        - apps/api/**
+        - package.json
+        - package-lock.json
+        - render.yaml
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: CLUB_TIMEZONE
+        value: Asia/Kolkata
+      - key: WEB_ORIGIN
+        value: https://animemangaclub.dev
+      - key: BETTER_AUTH_URL
+        value: https://animemangaclub.dev
+      - key: EMAIL_FROM
+        value: "Anime Manga Club <club@animemangaclub.dev>"
+      # Shared with the website (Vercel), which sends it with each visitor's IP.
+      # Render generates it; copy it into Vercel's WEB_PROXY_SECRET.
+      - key: WEB_PROXY_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_UNPOOLED
+        sync: false
+      - key: BETTER_AUTH_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: ALLOWED_EMAIL_DOMAINS
+        sync: false

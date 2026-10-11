@@ -12,7 +12,7 @@ import type { Auth } from "./auth.js";
 import type { Db } from "./db/client.js";
 import type { Env } from "./env.js";
 import type { AnilistClient } from "./lib/anilist.js";
-import { withClientIp } from "./lib/client-ip.js";
+import { websiteVisitor, withClientIp } from "./lib/client-ip.js";
 import { AppError, type ErrorBody } from "./lib/errors.js";
 import type { Logger } from "./lib/logger.js";
 import { loadSession } from "./middleware/auth.js";
@@ -31,7 +31,7 @@ import { userRoutes } from "./routes/users.js";
 import type { AppEnv } from "./types.js";
 
 export interface AppDeps {
-  env: Pick<Env, "WEB_ORIGIN" | "NODE_ENV" | "CLUB_TIMEZONE">;
+  env: Pick<Env, "WEB_ORIGIN" | "NODE_ENV" | "CLUB_TIMEZONE" | "WEB_PROXY_SECRET">;
   logger: Logger;
   db: Db;
   auth: Auth;
@@ -78,6 +78,8 @@ export function createApp(deps: AppDeps) {
       allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     }),
   );
+  // Who the visitor really is, when the website forwarded the request (before any limit).
+  app.use("/api/*", websiteVisitor(env.WEB_PROXY_SECRET));
   // Overall per-visitor ceiling, on top of the stricter per-feature limits.
   app.use("/api/*", rateLimit({ name: "global", windowMs: 60_000, max: 300, isTrustedProxy }));
   // The largest legitimate body is a 10,000-character review (~20 KB of JSON).

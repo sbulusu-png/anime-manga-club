@@ -12,6 +12,8 @@ import { fakeAnilist } from "./fake-anilist.js";
 import type { TestDb } from "./test-db.js";
 
 export const WEB_ORIGIN = "http://localhost:3000";
+/** The website's shared secret in tests (it sends each visitor's IP with it). */
+export const WEB_PROXY_SECRET = "test-website-secret-at-least-32-characters";
 /** Stand-ins for a real university's domains (.example is reserved, RFC 2606). */
 export const UNIVERSITY_DOMAINS = ["university.example", "college.example"];
 export const GOOGLE_CLIENT_ID = "test-client-id.apps.googleusercontent.com";
@@ -46,7 +48,7 @@ export function makeApp(
 ) {
   const auth = overrides.auth ?? makeAuth(db);
   const app = createApp({
-    env: { WEB_ORIGIN, NODE_ENV: "test", CLUB_TIMEZONE: "Asia/Kolkata" },
+    env: { WEB_ORIGIN, NODE_ENV: "test", CLUB_TIMEZONE: "Asia/Kolkata", WEB_PROXY_SECRET },
     logger: pino({ level: "silent" }),
     db,
     auth,

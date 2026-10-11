@@ -117,7 +117,7 @@ CI runs the checks, the build, the migrations and the end-to-end suite against a
 
 ## Deployment
 
-The API is set up for Fly.io in Singapore, next to the database (Docker image, migrations on each release, health checks); see [apps/api/DEPLOY.md](apps/api/DEPLOY.md). The website is headed for Vercel.
+Free plans throughout: the website on Vercel (at `animemangaclub.dev`), the API on Render in Singapore next to the Neon database (Docker image, migrations on each start, health checks), and email through Brevo. The website forwards each visitor's IP to the API with a shared secret, so rate limits work per visitor. Step by step: [DEPLOY.md](DEPLOY.md).
 
 ## Credits
 

@@ -30,6 +30,7 @@ describe("parseEnv", () => {
       ...required,
       NODE_ENV: "production",
       BREVO_API_KEY: "xkeysib-test",
+      WEB_PROXY_SECRET: "w".repeat(32),
       EMAIL_FROM: "Club <club@mail.example.com>",
     };
     expect(() => parseEnv(production)).toThrow(/ALLOWED_EMAIL_DOMAINS/);
@@ -89,9 +90,24 @@ describe("parseEnv", () => {
       NODE_ENV: "production",
       BREVO_API_KEY: "xkeysib-1",
       EMAIL_FROM: "club@mail.example.com",
+      WEB_PROXY_SECRET: "w".repeat(32),
       ALLOWED_EMAIL_DOMAINS: "university.example",
     });
     expect(production.NODE_ENV).toBe("production");
+  });
+
+  it("needs the website's shared secret in production, and a long one", () => {
+    const production = {
+      ...required,
+      NODE_ENV: "production",
+      BREVO_API_KEY: "xkeysib-1",
+      EMAIL_FROM: "club@mail.example.com",
+      ALLOWED_EMAIL_DOMAINS: "university.example",
+    };
+    expect(() => parseEnv(production)).toThrow(/WEB_PROXY_SECRET/);
+    expect(() => parseEnv({ ...production, WEB_PROXY_SECRET: "short" })).toThrow(
+      /32 characters[\s\S]*WEB_PROXY_SECRET/,
+    );
   });
 
   it("needs a real sender with a Brevo key", () => {

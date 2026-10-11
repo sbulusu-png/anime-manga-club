@@ -177,5 +177,5 @@ Installed Claude plugins used: **gsap-skills** (all frontend motion), **graphify
 Later (only when asked):
 
 - Push to a private GitHub repo
-- Deploy the API to Fly.io and the website to Vercel; trust the Vercel → Fly hop so rate limits see real client IPs; custom domain
+- Deploy on free plans: the website to Vercel at `animemangaclub.dev`, the API to Render (`render.yaml`; migrations on start, since the free plan has no release step). Ready: the website now forwards each visitor's IP with a shared secret (`WEB_PROXY_SECRET`) so rate limits work per visitor, and `/api/health/live` lets keep-awake pings skip the database. Left: the accounts, secrets and DNS records in DEPLOY.md
 - Before launch: rotate the Neon password and the old Mail Sentry Google OAuth client

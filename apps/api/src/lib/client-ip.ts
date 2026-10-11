@@ -1,7 +1,11 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { BlockList, isIP } from "node:net";
 
 import { getConnInfo } from "@hono/node-server/conninfo";
 import type { Context } from "hono";
+import { createMiddleware } from "hono/factory";
+
+import type { AppEnv } from "../types.js";
 
 /** Private and loopback ranges: the website's proxy and the host's load balancer. */
 export const DEFAULT_TRUSTED_PROXIES = [
@@ -18,6 +22,13 @@ export const DEFAULT_TRUSTED_PROXIES = [
  * any value a client sends is overwritten before the request reaches it.
  */
 export const CLIENT_IP_HEADER = "x-amc-client-ip";
+
+/**
+ * Headers the website adds to every request it forwards here (apps/web/src/lib/visitor.ts):
+ * a shared secret, and the visitor's IP as the website's host saw it.
+ */
+export const WEB_PROXY_SECRET_HEADER = "x-amc-proxy-secret";
+export const VISITOR_IP_HEADER = "x-amc-visitor-ip";
 
 /** Strips IPv4-mapped IPv6 (`::ffff:1.2.3.4`) down to plain IPv4. */
 function normalize(ip: string): string {
@@ -73,6 +84,38 @@ export function resolveClientIp(
   return null;
 }
 
+const sha256 = (value: string) => createHash("sha256").update(value).digest();
+
+/**
+ * Behind the website's host (Vercel), every request reaches us from the host's servers,
+ * so the socket and X-Forwarded-For only name those. The website therefore sends the
+ * visitor's IP itself, with a shared secret; only then is it believed. Anyone else
+ * (including a request straight to the API) is judged by their own address as usual.
+ */
+export function websiteVisitor(secret: string | undefined) {
+  const expected = secret ? sha256(secret) : null;
+  return createMiddleware<AppEnv>(async (c, next) => {
+    const given = c.req.header(WEB_PROXY_SECRET_HEADER);
+    const ip = normalize(c.req.header(VISITOR_IP_HEADER)?.trim() ?? "");
+    // Compared as hashes, so the comparison takes the same time whatever was sent.
+    if (expected && given && timingSafeEqual(expected, sha256(given)) && isIP(ip)) {
+      c.set("visitorIp", ip);
+    }
+    await next();
+  });
+}
+
+/** The client's IP: the one the website vouched for, or else worked out from the hops. */
+export function clientIpOf(
+  c: Context<AppEnv>,
+  isTrustedProxy: (ip: string) => boolean,
+): string | null {
+  return (
+    c.get("visitorIp") ??
+    resolveClientIp(socketPeer(c), c.req.header("x-forwarded-for"), isTrustedProxy)
+  );
+}
+
 function socketPeer(c: Context): string | undefined {
   try {
     return getConnInfo(c).remote.address;
@@ -81,15 +124,16 @@ function socketPeer(c: Context): string | undefined {
   }
 }
 
-/** Copies the request, replacing CLIENT_IP_HEADER with the resolved client IP. */
-export function withClientIp(c: Context, isTrustedProxy: (ip: string) => boolean): Request {
+/**
+ * Copies the request, replacing CLIENT_IP_HEADER with the resolved client IP (and
+ * dropping the website's secret, which Better Auth has no use for).
+ */
+export function withClientIp(c: Context<AppEnv>, isTrustedProxy: (ip: string) => boolean): Request {
   const headers = new Headers(c.req.raw.headers);
   headers.delete(CLIENT_IP_HEADER);
-  const ip = resolveClientIp(
-    socketPeer(c),
-    headers.get("x-forwarded-for") ?? undefined,
-    isTrustedProxy,
-  );
+  headers.delete(WEB_PROXY_SECRET_HEADER);
+  headers.delete(VISITOR_IP_HEADER);
+  const ip = clientIpOf(c, isTrustedProxy);
   if (ip) headers.set(CLIENT_IP_HEADER, ip);
   return new Request(c.req.raw, { headers });
 }

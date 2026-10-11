@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 # API image. Build from the repository root (the npm workspace lockfile lives there):
-#   fly deploy . --config apps/api/fly.toml   (or: docker build -f apps/api/Dockerfile .)
+#   docker build -f apps/api/Dockerfile .
+# Render runs it with `node dist/scripts/serve.js` (migrations, then the server); see DEPLOY.md.
 
 FROM node:24-slim AS base
 WORKDIR /app

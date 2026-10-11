@@ -9,6 +9,8 @@ export interface AppEnv {
     log: Logger;
     user: AuthUser | null;
     session: AuthSession["session"] | null;
+    /** The visitor's IP as the website vouched for it (see lib/client-ip.ts), if it did. */
+    visitorIp: string | undefined;
     /** A session still waiting for its emailed sign-in code (user and session are null). */
     pendingSession: AuthSession | null;
   };

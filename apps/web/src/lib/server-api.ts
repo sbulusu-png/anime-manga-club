@@ -1,12 +1,13 @@
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 
 import type { Viewer } from "./types";
 
 import { signInHref, welcomeHref } from "./safe-next";
+import { visitorHeaders } from "./visitor";
 
 /** The API, reached directly from the server (browsers go through the /api proxy). */
 const API_ORIGIN = process.env.API_ORIGIN ?? "http://localhost:4000";
@@ -41,6 +42,15 @@ export const TAGS = {
 const SESSION_COOKIE = "amc.session_token";
 
 /**
+ * Per-visitor requests say who the visitor is (see lib/visitor.ts), so the API's rate
+ * limits and sign-in emails name them rather than this server. Cached public requests
+ * don't: they're shared by everyone.
+ */
+async function asVisitor() {
+  return visitorHeaders(await headers());
+}
+
+/**
  * Like apiGet, but as the signed-in member, for data that differs per viewer (such as
  * whether they liked each review). Signed-in requests are never cached, so one
  * member's view can't be served to another; guests still get the cached version.
@@ -52,7 +62,10 @@ export async function apiGetAsViewer<T>(
 ): Promise<T | null> {
   const cookieHeader = (await cookies()).toString();
   if (!cookieHeader.includes(SESSION_COOKIE)) return apiGet<T>(path, revalidate, tags);
-  return request<T>(path, { cache: "no-store", headers: { cookie: cookieHeader } });
+  return request<T>(path, {
+    cache: "no-store",
+    headers: { cookie: cookieHeader, ...(await asVisitor()) },
+  });
 }
 
 async function request<T>(path: `/api/${string}`, init: RequestInit): Promise<T | null> {
@@ -97,7 +110,7 @@ const getSession = cache(async (): Promise<Session> => {
 
   try {
     const res = await fetch(`${API_ORIGIN}/api/me`, {
-      headers: { cookie: cookieHeader },
+      headers: { cookie: cookieHeader, ...(await asVisitor()) },
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
     });
@@ -136,7 +149,7 @@ export async function getSignInCodeStatus(): Promise<SignInCodeStatus | null> {
   if (!cookieHeader.includes(SESSION_COOKIE)) return null;
   try {
     const res = await fetch(`${API_ORIGIN}/api/sign-in-code`, {
-      headers: { cookie: cookieHeader },
+      headers: { cookie: cookieHeader, ...(await asVisitor()) },
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
     });

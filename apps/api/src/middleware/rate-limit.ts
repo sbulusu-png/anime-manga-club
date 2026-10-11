@@ -1,8 +1,7 @@
-import { getConnInfo } from "@hono/node-server/conninfo";
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 
-import { resolveClientIp } from "../lib/client-ip.js";
+import { clientIpOf } from "../lib/client-ip.js";
 import { AppError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
@@ -23,18 +22,8 @@ interface RateLimitOptions {
 export function rateLimit({ name, windowMs, max, isTrustedProxy, keyBy }: RateLimitOptions) {
   const hits = new Map<string, { count: number; resetAt: number }>();
 
-  function clientIp(c: Context<AppEnv>) {
-    let peer: string | undefined;
-    try {
-      peer = getConnInfo(c).remote.address;
-    } catch {
-      // No socket (in-process tests).
-    }
-    return resolveClientIp(peer, c.req.header("x-forwarded-for"), isTrustedProxy) ?? "unknown";
-  }
-
   return createMiddleware<AppEnv>(async (c, next) => {
-    const key = `${name}|${keyBy?.(c) ?? clientIp(c)}`;
+    const key = `${name}|${keyBy?.(c) ?? clientIpOf(c, isTrustedProxy) ?? "unknown"}`;
     const now = Date.now();
 
     if (hits.size > 10_000) {
