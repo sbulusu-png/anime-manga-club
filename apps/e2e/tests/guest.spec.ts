@@ -123,6 +123,8 @@ test.describe("accessibility", () => {
     "/reviews",
     "/club",
     "/credits",
+    "/privacy",
+    "/terms",
     "/sign-in",
     "/sign-up",
     "/forgot-password",

@@ -15,6 +15,16 @@ export function SiteFooter() {
             </Link>
           </li>
           <li>
+            <Link href="/privacy" className="hover:text-ink hover:underline">
+              Privacy
+            </Link>
+          </li>
+          <li>
+            <Link href="/terms" className="hover:text-ink hover:underline">
+              Terms
+            </Link>
+          </li>
+          <li>
             {/* Served by the API through the /api proxy, so a plain link (not next/link). */}
             <a href="/api/docs" className="hover:text-ink hover:underline">
               API docs
