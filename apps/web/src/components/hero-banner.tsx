@@ -13,6 +13,8 @@ const CHARACTERS = [
     name: "Monkey D. Luffy",
     short: "Luffy",
     area: "lead",
+    // Phones: where to aim the crop so the whole face shows (x% y% of the picture).
+    focus: "50% 30%",
     color: "#e63946",
     image: "https://s4.anilist.co/file/anilistcdn/character/large/b40-MNypXsxSRb1R.png",
   },
@@ -20,6 +22,7 @@ const CHARACTERS = [
     name: "Ichigo Kurosaki",
     short: "Ichigo",
     area: "upper",
+    focus: "60% 42%",
     color: "#ff8c1a",
     image: "https://s4.anilist.co/file/anilistcdn/character/large/b5-a7bkJgjhhigE.png",
   },
@@ -27,6 +30,7 @@ const CHARACTERS = [
     name: "Asta",
     short: "Asta",
     area: "middle",
+    focus: "50% 42%",
     color: "#2dbd6e",
     image: "https://s4.anilist.co/file/anilistcdn/character/large/b123285-tKijiuQErDS0.png",
   },
@@ -34,8 +38,7 @@ const CHARACTERS = [
     name: "Edward Elric",
     short: "Edward",
     area: "left",
-    // Phones: the shorter bottom panels aim lower in the art, at the face.
-    focus: "center 30%",
+    focus: "50% 24%",
     color: "#d4a017",
     image: "https://s4.anilist.co/file/anilistcdn/character/large/b11-TA5Nuk7EDUZG.jpg",
   },
@@ -43,7 +46,7 @@ const CHARACTERS = [
     name: "Conan Edogawa",
     short: "Conan",
     area: "right",
-    focus: "center 35%",
+    focus: "50% 11%",
     color: "#2f6fed",
     image: "https://s4.anilist.co/file/anilistcdn/character/large/b1742-NiV278NBFOvZ.png",
   },
@@ -124,7 +127,7 @@ export function HeroBanner() {
       />
 
       {/* Phones: a manga panel grid (areas below). Wide screens: slanted panels in a row. */}
-      <div className="relative grid h-[26rem] grid-cols-[1.15fr_1fr] grid-rows-[1fr_1fr_0.9fr] gap-1.5 px-1.5 pb-1.5 [grid-template-areas:'lead_upper'_'lead_middle'_'left_right'] sm:absolute sm:inset-0 sm:flex sm:h-auto sm:-skew-x-[8deg] sm:flex-row sm:gap-1.5 sm:p-0 sm:px-[3%]">
+      <div className="relative grid h-[clamp(27rem,112vw,32rem)] grid-cols-[1.15fr_1fr] grid-rows-3 gap-1.5 px-1.5 pb-1.5 [grid-template-areas:'lead_upper'_'lead_middle'_'left_right'] sm:absolute sm:inset-0 sm:flex sm:h-auto sm:-skew-x-[8deg] sm:flex-row sm:gap-1.5 sm:p-0 sm:px-[3%]">
         {CHARACTERS.map((character) => (
           <div
             key={character.name}
@@ -132,7 +135,7 @@ export function HeroBanner() {
             style={{
               gridArea: character.area,
               // Where phones crop each picture (wide screens crop from the top).
-              ["--focus" as string]: character.focus ?? "top",
+              ["--focus" as string]: character.focus,
               borderColor: character.color,
               background: `linear-gradient(180deg, transparent 40%, color-mix(in srgb, ${character.color} 45%, transparent))`,
             }}
@@ -150,7 +153,7 @@ export function HeroBanner() {
             </div>
             <div
               aria-hidden="true"
-              className="absolute inset-0 bg-[linear-gradient(180deg,transparent_55%,#0b0a10ee_100%)]"
+              className="absolute inset-0 bg-[linear-gradient(180deg,transparent_72%,#0b0a10bb_100%)] sm:bg-[linear-gradient(180deg,transparent_55%,#0b0a10ee_100%)]"
             />
             {/* Phones: a manga caption box naming who's in the panel. */}
             <span
