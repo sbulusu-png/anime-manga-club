@@ -11,26 +11,39 @@ gsap.registerPlugin(useGSAP);
 const CHARACTERS = [
   {
     name: "Monkey D. Luffy",
+    short: "Luffy",
+    area: "lead",
     color: "#e63946",
     image: "https://s4.anilist.co/file/anilistcdn/character/large/b40-MNypXsxSRb1R.png",
   },
   {
     name: "Ichigo Kurosaki",
+    short: "Ichigo",
+    area: "upper",
     color: "#ff8c1a",
     image: "https://s4.anilist.co/file/anilistcdn/character/large/b5-a7bkJgjhhigE.png",
   },
   {
     name: "Asta",
+    short: "Asta",
+    area: "middle",
     color: "#2dbd6e",
     image: "https://s4.anilist.co/file/anilistcdn/character/large/b123285-tKijiuQErDS0.png",
   },
   {
     name: "Edward Elric",
+    short: "Edward",
+    area: "left",
+    // Phones: the shorter bottom panels aim lower in the art, at the face.
+    focus: "center 30%",
     color: "#d4a017",
     image: "https://s4.anilist.co/file/anilistcdn/character/large/b11-TA5Nuk7EDUZG.jpg",
   },
   {
     name: "Conan Edogawa",
+    short: "Conan",
+    area: "right",
+    focus: "center 35%",
     color: "#2f6fed",
     image: "https://s4.anilist.co/file/anilistcdn/character/large/b1742-NiV278NBFOvZ.png",
   },
@@ -41,9 +54,11 @@ const TITLE = "ANIME MANGA CLUB";
 const TITLE_LETTERS = Array.from(TITLE, (char, position) => ({ char, id: `letter-${position}` }));
 
 /**
- * The home page banner: five slanted character panels that widen on hover, with the
- * club name on top. Panels slide in and the title drops in letter by letter, unless
- * the visitor prefers reduced motion.
+ * The home page banner. Wide screens: five slanted character panels that widen on
+ * hover, with the club name across the bottom. Phones: a manga page, the club name as
+ * a masthead over a panel grid (Luffy in the tall lead panel), each character named in
+ * a caption box. Same five images either way. Panels arrive first, then the title drops
+ * in letter by letter, unless the visitor prefers reduced motion.
  */
 export function HeroBanner() {
   const rootRef = useRef<HTMLElement>(null);
@@ -64,10 +79,14 @@ export function HeroBanner() {
             .addLabel("panels")
             .from(
               ".banner-panel",
-              narrow ? { xPercent: -110, stagger: 0.08 } : { yPercent: 110, stagger: 0.09 },
+              // Phones: panels pop in like a page being inked; wide: they rise into place.
+              narrow
+                ? { scale: 0.85, autoAlpha: 0, stagger: 0.08, ease: "back.out(1.6)" }
+                : { yPercent: 110, stagger: 0.09 },
               "panels",
             )
             .from(".banner-panel img", { scale: 1.3, stagger: 0.09, duration: 1.1 }, "panels")
+            .from(".banner-caption", { autoAlpha: 0, y: 8, stagger: 0.06, duration: 0.4 }, "-=0.5")
             .addLabel("title", "-=0.3")
             .from(
               ".banner-letter",
@@ -96,7 +115,7 @@ export function HeroBanner() {
     <section
       ref={rootRef}
       aria-labelledby="banner-title"
-      className="relative mx-auto mt-4 aspect-[4/5] w-[calc(100%-2rem)] max-w-6xl overflow-hidden rounded-3xl bg-[#0b0a10] shadow-card sm:aspect-[21/8] sm:min-h-80"
+      className="relative mx-auto mt-4 flex w-[calc(100%-2rem)] max-w-6xl flex-col overflow-hidden rounded-3xl bg-[#0b0a10] shadow-card sm:block sm:aspect-[21/8] sm:min-h-80"
     >
       {/* Soft glow and speed lines behind the panels. */}
       <div
@@ -104,12 +123,16 @@ export function HeroBanner() {
         className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,#2a1f4d_0%,transparent_60%),repeating-linear-gradient(115deg,#ffffff06_0_2px,transparent_2px_14px)]"
       />
 
-      <div className="absolute inset-0 flex flex-col gap-[3px] sm:-skew-x-[8deg] sm:flex-row sm:gap-1.5 sm:px-[3%]">
+      {/* Phones: a manga panel grid (areas below). Wide screens: slanted panels in a row. */}
+      <div className="relative grid h-[26rem] grid-cols-[1.15fr_1fr] grid-rows-[1fr_1fr_0.9fr] gap-1.5 px-1.5 pb-1.5 [grid-template-areas:'lead_upper'_'lead_middle'_'left_right'] sm:absolute sm:inset-0 sm:flex sm:h-auto sm:-skew-x-[8deg] sm:flex-row sm:gap-1.5 sm:p-0 sm:px-[3%]">
         {CHARACTERS.map((character) => (
           <div
             key={character.name}
-            className="banner-panel group relative flex-1 overflow-hidden border-b-[6px] transition-[flex-grow] duration-500 ease-[cubic-bezier(.2,.8,.2,1)] hover:flex-[1.8]"
+            className="banner-panel group relative overflow-hidden rounded-md border-b-[5px] transition-[flex-grow] duration-500 ease-[cubic-bezier(.2,.8,.2,1)] sm:flex-1 sm:rounded-none sm:border-b-[6px] sm:hover:flex-[1.8]"
             style={{
+              gridArea: character.area,
+              // Where phones crop each picture (wide screens crop from the top).
+              ["--focus" as string]: character.focus ?? "top",
               borderColor: character.color,
               background: `linear-gradient(180deg, transparent 40%, color-mix(in srgb, ${character.color} 45%, transparent))`,
             }}
@@ -122,22 +145,30 @@ export function HeroBanner() {
                 fill
                 priority
                 sizes="(max-width: 639px) 100vw, 40vw"
-                className="object-cover object-[center_20%] opacity-90 mix-blend-luminosity transition-opacity duration-300 group-hover:opacity-100 group-hover:mix-blend-normal sm:object-top"
+                className="object-cover object-[var(--focus)] sm:object-top sm:opacity-90 sm:mix-blend-luminosity sm:transition-opacity sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:mix-blend-normal"
               />
             </div>
             <div
               aria-hidden="true"
               className="absolute inset-0 bg-[linear-gradient(180deg,transparent_55%,#0b0a10ee_100%)]"
             />
+            {/* Phones: a manga caption box naming who's in the panel. */}
+            <span
+              aria-hidden="true"
+              className="banner-caption absolute bottom-1.5 left-1.5 rounded-sm border-2 border-black bg-[#f5f3ff] px-1.5 py-0.5 font-display text-sm leading-none tracking-wide text-black sm:hidden"
+            >
+              {character.short}
+            </span>
           </div>
         ))}
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center sm:top-auto sm:bottom-[5%] sm:translate-y-0">
+      {/* Phones: a masthead above the panels. Wide screens: across the panels' feet. */}
+      <div className="pointer-events-none relative order-first px-4 pb-3 pt-5 text-center sm:absolute sm:inset-x-0 sm:bottom-[5%] sm:p-0">
         <h1
           id="banner-title"
           aria-label="Anime Manga Club"
-          className="font-display text-[clamp(2.1rem,6.5vw,6rem)] leading-[0.9] tracking-[0.12em] text-[#f5f3ff] [paint-order:stroke_fill] [-webkit-text-stroke:2px_#000] [text-shadow:4px_4px_0_#e63946,8px_8px_0_#000]"
+          className="font-display text-[clamp(2.2rem,11vw,6rem)] leading-[0.9] tracking-[0.06em] sm:text-[clamp(2.1rem,6.5vw,6rem)] sm:tracking-[0.12em] text-[#f5f3ff] [paint-order:stroke_fill] [-webkit-text-stroke:2px_#000] [text-shadow:4px_4px_0_#e63946,8px_8px_0_#000]"
         >
           {TITLE_LETTERS.map(({ char, id }) =>
             char === " " ? (
@@ -149,7 +180,7 @@ export function HeroBanner() {
             ),
           )}
         </h1>
-        <p className="banner-tagline mt-2 text-[clamp(0.65rem,1.1vw,0.95rem)] font-semibold uppercase tracking-[0.4em] text-[#a9a3c2]">
+        <p className="banner-tagline mt-2 text-[0.7rem] font-semibold uppercase tracking-[0.3em] text-[#a9a3c2] sm:text-[clamp(0.65rem,1.1vw,0.95rem)] sm:tracking-[0.4em]">
           Reviews · Suggestions · Debates
         </p>
       </div>
