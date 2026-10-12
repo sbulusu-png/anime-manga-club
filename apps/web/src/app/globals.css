@@ -60,6 +60,8 @@
   --petal-2: light-dark(#ff8fb3, #e0527f);
   --petal-opacity: 0.75;
   --rail-opacity: 0.32;
+  /* Behind text on narrower screens: the most that keeps red and muted text at 4.5:1. */
+  --rail-opacity-narrow: 0.12;
   /* Manga panels: inked borders and hard, offset "comic" shadows. */
   --panel-border: light-dark(#1b1830, rgb(245 243 255 / 0.28));
   --panel-shadow: light-dark(#1b1830, rgb(214 40 57 / 0.7));
@@ -77,12 +79,14 @@
   /* The few values that aren't colours (and so can't use light-dark()). */
   --petal-opacity: 0.4;
   --rail-opacity: 0.38;
+  --rail-opacity-narrow: 0.14;
 }
 /* The same, when no theme is picked and the device is in dark mode. */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     --petal-opacity: 0.4;
     --rail-opacity: 0.38;
+    --rail-opacity-narrow: 0.14;
   }
 }
 
@@ -420,27 +424,41 @@
     }
   }
   /*
-   * Popular characters in the page margins (components/character-rails.tsx). Wide screens
-   * only: the rails fill the space beside the 72rem content column, and the veil (the page
-   * colour, fading in at its edges) sits between them and the content, so text keeps
-   * exactly the contrast measured above.
+   * Popular characters (components/character-rails.tsx). Phones and tablets have no
+   * margins, so the two rails split the screen behind the content, staggered, at
+   * --rail-opacity-narrow: faint enough that text stays at 4.5:1 or better even over the
+   * art's blackest (light theme) or whitest (dark theme) parts. Wide screens: the rails
+   * fill the space beside the 72rem content column, and the veil (the page colour, fading
+   * in at its edges) sits between them and the content, so text keeps exactly the
+   * contrast measured above.
    */
-  .character-rails {
-    display: none;
-  }
-  @media (min-width: 1280px) {
-    .character-rails {
-      display: block;
-    }
-  }
   .character-rail {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: calc((100vw - 72rem) / 2 + 1rem);
+    width: 50%;
     overflow: hidden;
-    opacity: var(--rail-opacity);
+    opacity: var(--rail-opacity-narrow);
     mask-image: linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+  }
+  /* The right column starts half a panel higher, so the faces interleave. */
+  .character-rail--right .character-rail__track {
+    margin-top: -9rem;
+  }
+  .character-rails__veil {
+    display: none;
+  }
+  @media (min-width: 1280px) {
+    .character-rail {
+      width: calc((100vw - 72rem) / 2 + 1rem);
+      opacity: var(--rail-opacity);
+    }
+    .character-rail--right .character-rail__track {
+      margin-top: 0;
+    }
+    .character-rails__veil {
+      display: block;
+    }
   }
   .character-rail--left {
     left: 0;
@@ -459,13 +477,18 @@
   .character-rail__panel {
     position: relative;
     flex: none;
-    width: clamp(6rem, calc((100vw - 72rem) / 2 - 1rem), 11rem);
+    width: min(40vw, 13rem);
     aspect-ratio: 2 / 3;
     overflow: hidden;
     border: 3px solid var(--surface-2);
     border-radius: 1rem;
     box-shadow: var(--shadow);
     filter: saturate(0.85);
+  }
+  @media (min-width: 1280px) {
+    .character-rail__panel {
+      width: clamp(6rem, calc((100vw - 72rem) / 2 - 1rem), 11rem);
+    }
   }
   .character-rails__veil {
     position: absolute;

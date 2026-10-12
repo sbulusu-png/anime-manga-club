@@ -54,31 +54,22 @@ function Rail({ side, images }: { side: "left" | "right"; images: string[] }) {
             className="character-rail__panel"
             style={{ rotate: `${String((i % 2 === 0 ? -1 : 1) * (side === "left" ? 3 : -3))}deg` }}
           >
-            <picture>
-              {/* Only screens wide enough to show the characters fetch them; smaller ones
-                  get the blank fallback. The first few on each side load straight away,
-                  as on short pages they're the largest thing on screen. */}
-              <source
-                media="(min-width: 1280px)"
-                srcSet={`${optimised(src, 256)} 1x, ${optimised(src, 384)} 2x`}
-              />
-              <img
-                src={BLANK}
-                alt=""
-                loading={i < 3 ? "eager" : "lazy"}
-                decoding="async"
-                className="absolute inset-0 size-full object-cover object-top"
-              />
-            </picture>
+            {/* The first few on each side load straight away, as on short pages they're
+                the largest thing on screen; the rest as they drift into view. */}
+            <img
+              src={optimised(src, 256)}
+              srcSet={`${optimised(src, 256)} 1x, ${optimised(src, 384)} 2x`}
+              alt=""
+              loading={i < 3 ? "eager" : "lazy"}
+              decoding="async"
+              className="absolute inset-0 size-full object-cover object-top"
+            />
           </div>
         ))}
       </div>
     </div>
   );
 }
-
-/** A 1x1 transparent GIF: what narrow screens get instead of the characters. */
-const BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
 /** The same resized, re-encoded copy next/image would serve (AVIF/WebP, cached). */
 const optimised = (src: string, width: number) =>
@@ -88,8 +79,9 @@ const optimised = (src: string, width: number) =>
 const DRIFT = 0.4;
 
 /**
- * Popular characters in the page margins, behind everything (see .character-rail in
- * globals.css). Wide screens only. They drift up at a steady fraction of the scroll, on
+ * Popular characters behind everything (see .character-rail in globals.css): in the page
+ * margins on wide screens, faintly behind the content on narrower ones, which have no
+ * margins. They drift up at a steady fraction of the scroll, on
  * an endless loop, so a page growing (Browse loading more) or changing never pulls them
  * backward; motion stops for reduced motion.
  */
@@ -101,39 +93,37 @@ export function CharacterRails() {
   useGSAP(
     () => {
       // Created inside useGSAP, so it is reverted on unmount with everything else.
-      gsap
-        .matchMedia()
-        .add("(min-width: 1280px) and (prefers-reduced-motion: no-preference)", () => {
-          const movers = gsap.utils.toArray<HTMLElement>(".character-rail__track").map((track) => {
-            // One set of characters (the track holds two); wrapping within it is seamless.
-            const loop = () => track.scrollHeight / 2;
-            const wrap = (y: number) => gsap.utils.wrap(-loop(), 0, y);
-            // quickTo reuses one tween for a value that changes on every scroll event.
-            return gsap.quickTo(track, "y", {
-              duration: 0.8,
-              ease: "power3",
-              modifiers: { y: (y: string) => `${String(wrap(parseFloat(y)))}px` },
-            });
+      gsap.matchMedia().add("(prefers-reduced-motion: no-preference)", () => {
+        const movers = gsap.utils.toArray<HTMLElement>(".character-rail__track").map((track) => {
+          // One set of characters (the track holds two); wrapping within it is seamless.
+          const loop = () => track.scrollHeight / 2;
+          const wrap = (y: number) => gsap.utils.wrap(-loop(), 0, y);
+          // quickTo reuses one tween for a value that changes on every scroll event.
+          return gsap.quickTo(track, "y", {
+            duration: 0.8,
+            ease: "power3",
+            modifiers: { y: (y: string) => `${String(wrap(parseFloat(y)))}px` },
           });
-          const update = () => {
-            const o = offsetRef.current;
-            // A jump of over a screen in one go isn't someone scrolling: it's a new
-            // page starting at the top (Next.js moves the scroll before the URL changes),
-            // Home/End or a link to an anchor. Fold it into the base, so the characters
-            // stay where they are instead of rewinding or racing ahead.
-            if (Math.abs(window.scrollY - o.lastScroll) > window.innerHeight) {
-              o.base += (o.lastScroll - window.scrollY) * DRIFT;
-            }
-            o.lastScroll = window.scrollY;
-            const y = -(o.base + window.scrollY * DRIFT);
-            for (const move of movers) move(y);
-          };
-          update();
-          window.addEventListener("scroll", update, { passive: true });
-          return () => {
-            window.removeEventListener("scroll", update);
-          };
         });
+        const update = () => {
+          const o = offsetRef.current;
+          // A jump of over a screen in one go isn't someone scrolling: it's a new
+          // page starting at the top (Next.js moves the scroll before the URL changes),
+          // Home/End or a link to an anchor. Fold it into the base, so the characters
+          // stay where they are instead of rewinding or racing ahead.
+          if (Math.abs(window.scrollY - o.lastScroll) > window.innerHeight) {
+            o.base += (o.lastScroll - window.scrollY) * DRIFT;
+          }
+          o.lastScroll = window.scrollY;
+          const y = -(o.base + window.scrollY * DRIFT);
+          for (const move of movers) move(y);
+        };
+        update();
+        window.addEventListener("scroll", update, { passive: true });
+        return () => {
+          window.removeEventListener("scroll", update);
+        };
+      });
     },
     { scope: rootRef },
   );
