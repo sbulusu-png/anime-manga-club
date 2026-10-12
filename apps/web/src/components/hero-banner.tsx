@@ -11,7 +11,6 @@ gsap.registerPlugin(useGSAP);
 const CHARACTERS = [
   {
     name: "Monkey D. Luffy",
-    short: "Luffy",
     area: "lead",
     // Phones: where to aim the crop so the whole face shows (x% y% of the picture).
     focus: "50% 30%",
@@ -20,7 +19,6 @@ const CHARACTERS = [
   },
   {
     name: "Ichigo Kurosaki",
-    short: "Ichigo",
     area: "upper",
     focus: "60% 42%",
     color: "#ff8c1a",
@@ -28,7 +26,6 @@ const CHARACTERS = [
   },
   {
     name: "Asta",
-    short: "Asta",
     area: "middle",
     focus: "50% 42%",
     color: "#2dbd6e",
@@ -36,7 +33,6 @@ const CHARACTERS = [
   },
   {
     name: "Edward Elric",
-    short: "Edward",
     area: "left",
     focus: "50% 24%",
     color: "#d4a017",
@@ -44,7 +40,6 @@ const CHARACTERS = [
   },
   {
     name: "Conan Edogawa",
-    short: "Conan",
     area: "right",
     focus: "50% 11%",
     color: "#2f6fed",
@@ -59,8 +54,8 @@ const TITLE_LETTERS = Array.from(TITLE, (char, position) => ({ char, id: `letter
 /**
  * The home page banner. Wide screens: five slanted character panels that widen on
  * hover, with the club name across the bottom. Phones: a manga page, the club name as
- * a masthead over a panel grid (Luffy in the tall lead panel), each character named in
- * a caption box. Same five images either way. Panels arrive first, then the title drops
+ * a masthead over a panel grid (Luffy in the tall lead panel), each face fully in frame.
+ * Same five images either way. Panels arrive first, then the title drops
  * in letter by letter, unless the visitor prefers reduced motion.
  */
 export function HeroBanner() {
@@ -89,7 +84,6 @@ export function HeroBanner() {
               "panels",
             )
             .from(".banner-panel img", { scale: 1.3, stagger: 0.09, duration: 1.1 }, "panels")
-            .from(".banner-caption", { autoAlpha: 0, y: 8, stagger: 0.06, duration: 0.4 }, "-=0.5")
             .addLabel("title", "-=0.3")
             .from(
               ".banner-letter",
@@ -155,13 +149,6 @@ export function HeroBanner() {
               aria-hidden="true"
               className="absolute inset-0 bg-[linear-gradient(180deg,transparent_72%,#0b0a10bb_100%)] sm:bg-[linear-gradient(180deg,transparent_55%,#0b0a10ee_100%)]"
             />
-            {/* Phones: a manga caption box naming who's in the panel. */}
-            <span
-              aria-hidden="true"
-              className="banner-caption absolute bottom-1.5 left-1.5 rounded-sm border-2 border-black bg-[#f5f3ff] px-1.5 py-0.5 font-display text-sm leading-none tracking-wide text-black sm:hidden"
-            >
-              {character.short}
-            </span>
           </div>
         ))}
       </div>
