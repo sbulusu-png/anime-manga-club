@@ -43,6 +43,10 @@ export interface WhereToLink {
   language: string | null;
   color: string | null;
   icon: string | null;
+  /** A streaming service's full-colour logo (from TMDB), shown instead of the icon. */
+  logo?: string | null;
+  /** Free to watch there (with or without ads). */
+  free?: boolean;
 }
 
 export interface MediaDetail extends MediaSummary {
@@ -65,6 +69,11 @@ export interface MediaDetail extends MediaSummary {
    * in copies of the page data cached before links existed.
    */
   links?: WhereToLink[];
+  /**
+   * Anime only: whether JustWatch (via TMDB) knows the title, and where to see every
+   * option in India. Missing in page data cached before it existed.
+   */
+  watchInIndia?: { matched: boolean; moreUrl: string } | null;
   syncedAt: string;
 }
 

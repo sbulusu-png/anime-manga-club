@@ -19,6 +19,10 @@ export class TtlCache<V> {
     return entry.value;
   }
 
+  clear(): void {
+    this.#entries.clear();
+  }
+
   set(key: string, value: V): void {
     this.#entries.delete(key);
     this.#entries.set(key, { value, expiresAt: Date.now() + this.#ttlMs });

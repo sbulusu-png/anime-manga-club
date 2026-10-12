@@ -263,12 +263,13 @@ describe("GET /api/media/:id", () => {
       synopsis: "Synopsis for 5.",
       anilistUrl: "https://anilist.co/anime/5",
       characters: [{ name: "Hero of 5", role: "MAIN" }],
-      // Official places that work in India only: social and disabled links are left
-      // out, and so is Hulu (US only).
-      links: [
-        { site: "Crunchyroll", kind: "stream", language: null, color: "#F88B24" },
-        { site: "Official Site", kind: "official", language: "Japanese" },
-      ],
+      // For anime, only the official site comes from AniList (social and disabled links
+      // left out); where it streams in India comes from JustWatch, here unavailable.
+      links: [{ site: "Official Site", kind: "official", language: "Japanese" }],
+      watchInIndia: {
+        matched: false,
+        moreUrl: "https://www.justwatch.com/in/search?q=Case%20Closed",
+      },
     });
   });
 

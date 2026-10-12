@@ -12,6 +12,7 @@ import type { Auth } from "./auth.js";
 import type { Db } from "./db/client.js";
 import type { Env } from "./env.js";
 import type { AnilistClient } from "./lib/anilist.js";
+import type { TmdbClient } from "./lib/tmdb.js";
 import { websiteVisitor, withClientIp } from "./lib/client-ip.js";
 import { AppError, type ErrorBody } from "./lib/errors.js";
 import type { Logger } from "./lib/logger.js";
@@ -36,12 +37,14 @@ export interface AppDeps {
   db: Db;
   auth: Auth;
   anilist: AnilistClient;
+  /** Where anime streams in India (TMDB, from JustWatch); null without a token. */
+  tmdb: TmdbClient | null;
   isTrustedProxy: (ip: string) => boolean;
   pingDatabase: () => Promise<void>;
 }
 
 export function createApp(deps: AppDeps) {
-  const { env, logger, db, auth, anilist, isTrustedProxy, pingDatabase } = deps;
+  const { env, logger, db, auth, anilist, tmdb, isTrustedProxy, pingDatabase } = deps;
   const app = new Hono<AppEnv>();
 
   app.use(requestId());
@@ -105,7 +108,7 @@ export function createApp(deps: AppDeps) {
   app.use("/api/*", loadSession(auth));
   app.route("/api/me", meRoutes);
   app.route("/api/sign-in-code", signInCodeRoutes({ db, auth, isTrustedProxy }));
-  app.route("/api/media", mediaRoutes({ db, anilist, isTrustedProxy }));
+  app.route("/api/media", mediaRoutes({ db, anilist, tmdb, isTrustedProxy }));
   app.route("/api/reviews", reviewRoutes({ db, isTrustedProxy }));
   app.route("/api/list", listRoutes({ db, anilist, isTrustedProxy }));
   app.route("/api/users", userRoutes({ db }));

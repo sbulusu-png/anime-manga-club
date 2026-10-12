@@ -229,7 +229,7 @@ export default async function MediaPage({ params }: Props) {
 
           <ClubVerdict mediaId={media.id} club={media.club} canEdit={user?.role === "admin"} wide />
 
-          <WhereTo kind={media.kind} links={media.links ?? []} />
+          <WhereTo kind={media.kind} links={media.links ?? []} india={media.watchInIndia ?? null} />
 
           {media.tags.length > 0 && (
             <section aria-labelledby="tags-heading" className="flex flex-col gap-2">

@@ -7,6 +7,7 @@ import { createAuth } from "./auth.js";
 import { createDb } from "./db/client.js";
 import { env } from "./env.js";
 import { createAnilistClient } from "./lib/anilist.js";
+import { createTmdbClient } from "./lib/tmdb.js";
 import { createProxyMatcher } from "./lib/client-ip.js";
 import { brevoMailer, logMailer, routedMailer } from "./lib/email.js";
 import { logger } from "./lib/logger.js";
@@ -58,6 +59,7 @@ const app = createApp({
   db: database.db,
   auth,
   anilist: createAnilistClient(),
+  tmdb: env.TMDB_API_TOKEN ? createTmdbClient({ token: env.TMDB_API_TOKEN }) : null,
   isTrustedProxy: createProxyMatcher(env.TRUSTED_PROXIES),
   pingDatabase: database.ping,
 });

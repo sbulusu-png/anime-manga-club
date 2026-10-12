@@ -37,6 +37,11 @@ const envSchema = z
     GOOGLE_CLIENT_ID: optionalString,
     GOOGLE_CLIENT_SECRET: optionalString,
     /** Sends email (verification, password reset). Required in production. */
+    /**
+     * TMDB's "API Read Access Token", for where anime streams in India (JustWatch's data).
+     * Optional: without it, title pages link to a JustWatch search instead.
+     */
+    TMDB_API_TOKEN: optionalString,
     /** Sends email through Brevo. Required in production. */
     BREVO_API_KEY: optionalString,
     /** The sender, verified in Brevo: "Anime Manga Club <club@mail.example.com>". */

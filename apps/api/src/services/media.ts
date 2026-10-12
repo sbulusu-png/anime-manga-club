@@ -18,13 +18,13 @@ import {
   type AnilistClient,
   type Character,
   type WhereToLink,
-  availableInIndia,
   toMediaRow,
 } from "../lib/anilist.js";
 import { type Cursor, decodeCursor, encodeCursor } from "../lib/cursor.js";
 import { AppError } from "../lib/errors.js";
 import { type Rating, ratingToValue, valueToRating } from "../lib/rating.js";
 import { titleKey } from "../lib/title-key.js";
+import type { WatchInIndia } from "./watch-in-india.js";
 import { TtlCache } from "../lib/ttl-cache.js";
 
 export type MediaRow = typeof media.$inferSelect;
@@ -442,6 +442,7 @@ export function toMediaDetail(
   row: MediaRow,
   { characters, links }: { characters: Character[]; links: WhereToLink[] },
   giver: VerdictGiver | null,
+  india: WatchInIndia | null = null,
 ) {
   const summary = toMediaSummary(row);
   return {
@@ -459,7 +460,10 @@ export function toMediaDetail(
     volumes: row.volumes,
     anilistUrl: `https://anilist.co/${row.type}/${row.anilistId}`,
     characters,
-    links: availableInIndia(row.type, links),
+    // Anime: the official site from AniList, then what streams it in India (JustWatch).
+    // AniList's own streaming links are worldwide, so they're not shown for anime.
+    links: india ? [...links.filter((l) => l.kind === "official"), ...india.links] : links,
+    watchInIndia: india ? { matched: india.matched, moreUrl: india.moreUrl } : null,
     syncedAt: row.syncedAt,
   };
 }

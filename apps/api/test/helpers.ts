@@ -44,7 +44,7 @@ export function makeAuth(db: TestDb, overrides: Partial<Parameters<typeof create
 
 export function makeApp(
   db: TestDb,
-  overrides: Partial<Pick<AppDeps, "pingDatabase" | "anilist" | "auth">> = {},
+  overrides: Partial<Pick<AppDeps, "pingDatabase" | "anilist" | "auth" | "tmdb">> = {},
 ) {
   const auth = overrides.auth ?? makeAuth(db);
   const app = createApp({
@@ -54,6 +54,8 @@ export function makeApp(
     auth,
     // Tests never reach the real AniList; pass a fakeAnilist() client to control it.
     anilist: createAnilistClient({ fetch: fakeAnilist().fetch }),
+    // No TMDB unless a test brings a fake: anime pages then link to a JustWatch search.
+    tmdb: null,
     isTrustedProxy: createProxyMatcher(DEFAULT_TRUSTED_PROXIES),
     pingDatabase: () => Promise.resolve(),
     ...overrides,

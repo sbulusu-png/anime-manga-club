@@ -171,6 +171,14 @@ const SECTIONS: { heading: string; credits: Credit[] }[] = [
     heading: "Services",
     credits: [
       {
+        name: "Where to watch in India",
+        url: "https://www.justwatch.com/in",
+        by: "JustWatch, through TMDB",
+        license: "TMDB API terms",
+        licenseUrl: "https://www.themoviedb.org/api-terms-of-use",
+        note: "Which services stream each anime in India comes from JustWatch, through the TMDB API. This product uses the TMDB API but is not endorsed or certified by TMDB.",
+      },
+      {
         name: "Pwned Passwords",
         url: "https://haveibeenpwned.com/Passwords",
         by: "Troy Hunt (Have I Been Pwned)",

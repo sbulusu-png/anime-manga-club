@@ -25,7 +25,9 @@ import {
   toMediaSummary,
   verdictGiver,
 } from "../services/media.js";
+import type { TmdbClient } from "../lib/tmdb.js";
 import { similarTo, toRecommendationJson } from "../services/recommendations.js";
+import { type WatchInIndia, justWatchSearchUrl, watchInIndia } from "../services/watch-in-india.js";
 import { cleanReviewBody } from "./reviews.js";
 import type { AppEnv } from "../types.js";
 
@@ -48,6 +50,8 @@ const verdictBody = z.strictObject({
 interface MediaRouteDeps {
   db: Db;
   anilist: AnilistClient;
+  /** For where anime streams in India; null without a TMDB token. */
+  tmdb: TmdbClient | null;
   isTrustedProxy: (ip: string) => boolean;
 }
 
@@ -88,7 +92,7 @@ const idParam = z.object({ id: z.coerce.number().int().positive().max(2_147_483_
 
 const notFound = () => new AppError(404, "MEDIA_NOT_FOUND", "No anime or manga with that id.");
 
-export function mediaRoutes({ db, anilist, isTrustedProxy }: MediaRouteDeps) {
+export function mediaRoutes({ db, anilist, tmdb, isTrustedProxy }: MediaRouteDeps) {
   // Routes that may call AniList get a per-visitor limit on top of the global budget.
   const anilistLimit = rateLimit({ name: "anilist", windowMs: 60_000, max: 10, isTrustedProxy });
 
@@ -183,7 +187,20 @@ export function mediaRoutes({ db, anilist, isTrustedProxy }: MediaRouteDeps) {
             verdictGiver(db, row),
           ]);
 
-          return c.json({ item: toMediaDetail(row, extras, giver) });
+          // Like characters, a nice-to-have: without it, the page links to JustWatch instead.
+          const india: WatchInIndia | null =
+            row.type === "anime"
+              ? await watchInIndia(tmdb, row, extras.links).catch((err: unknown) => {
+                  c.get("log").warn({ err, mediaId: row.id }, "could not check India streaming");
+                  return {
+                    matched: false,
+                    links: [],
+                    moreUrl: justWatchSearchUrl(row.titleEnglish ?? row.titleRomaji),
+                  };
+                })
+              : null;
+
+          return c.json({ item: toMediaDetail(row, extras, giver, india) });
         },
       )
 
