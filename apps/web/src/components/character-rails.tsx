@@ -55,7 +55,9 @@ function Rail({ side, images }: { side: "left" | "right"; images: string[] }) {
             style={{ rotate: `${String((i % 2 === 0 ? -1 : 1) * (side === "left" ? 3 : -3))}deg` }}
           >
             {/* The first few on each side load straight away, as on short pages they're
-                the largest thing on screen; the rest as they drift into view. */}
+                the largest thing on screen; the rest as they drift into view. Already
+                served by next/image's optimiser (see `optimised`), at fixed sizes. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={optimised(src, 256)}
               srcSet={`${optimised(src, 256)} 1x, ${optimised(src, 384)} 2x`}
