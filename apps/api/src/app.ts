@@ -46,11 +46,14 @@ export interface AppDeps {
 export function createApp(deps: AppDeps) {
   const { env, logger, db, auth, anilist, tmdb, isTrustedProxy, pingDatabase } = deps;
   const app = new Hono<AppEnv>();
+  // The API docs are for building the club's site, not for its visitors: kept out of
+  // production, where they'd map every endpoint for anyone curious.
+  const serveDocs = env.NODE_ENV !== "production";
 
   app.use(requestId());
   app.use(requestLogger(logger));
   // The API only ever returns JSON: forbid browsers from loading or framing anything.
-  // The one HTML page, /api/docs, may load the Scalar viewer from its CDN.
+  // The one HTML page, /api/docs (outside production), may load the Scalar viewer from its CDN.
   const jsonHeaders = secureHeaders({
     contentSecurityPolicy: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] },
     xFrameOptions: "DENY",
@@ -100,7 +103,9 @@ export function createApp(deps: AppDeps) {
     timeout(30_000, () => new HTTPException(503, { message: "The request took too long." })),
   );
 
-  // Better Auth owns everything under /api/auth (sign-up, sign-in, Google, sessions).
+  // Better Auth owns everything under /api/auth (sign-up, sign-in, Google, sessions),
+  // apart from its OpenAPI schema in production.
+  if (!serveDocs) app.all("/api/auth/open-api/*", (c) => c.notFound());
   app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(withClientIp(c, isTrustedProxy)));
 
   // Health is registered before the session loader so it works even when sessions can't load.
@@ -116,37 +121,39 @@ export function createApp(deps: AppDeps) {
   app.route("/api/recommendations", recommendationRoutes({ db }));
   if (env.NODE_ENV === "development") app.route("/api/dev", devRoutes(auth));
 
-  // API documentation, generated from the routes' own validation schemas.
-  app.get(
-    "/api/openapi.json",
-    openAPIRouteHandler(app, {
-      documentation: {
-        info: {
-          title: "Anime Manga Club API",
-          version: "1.0.0",
-          description:
-            "Reviews, lists and suggestions for the club. Sign-in endpoints live under " +
-            "/api/auth and are documented separately (see the sources menu on /api/docs).",
-        },
-        servers: [{ url: env.WEB_ORIGIN, description: "Through the website (same origin)" }],
-        components: {
-          securitySchemes: {
-            session: { type: "apiKey", in: "cookie", name: "amc.session_token" },
+  // API documentation, generated from the routes' own validation schemas (not in production).
+  if (serveDocs) {
+    app.get(
+      "/api/openapi.json",
+      openAPIRouteHandler(app, {
+        documentation: {
+          info: {
+            title: "Anime Manga Club API",
+            version: "1.0.0",
+            description:
+              "Reviews, lists and suggestions for the club. Sign-in endpoints live under " +
+              "/api/auth and are documented separately (see the sources menu on /api/docs).",
+          },
+          servers: [{ url: env.WEB_ORIGIN, description: "Through the website (same origin)" }],
+          components: {
+            securitySchemes: {
+              session: { type: "apiKey", in: "cookie", name: "amc.session_token" },
+            },
           },
         },
-      },
-    }),
-  );
-  app.get(
-    "/api/docs",
-    Scalar({
-      pageTitle: "Anime Manga Club API",
-      sources: [
-        { title: "Club API", url: "/api/openapi.json" },
-        { title: "Sign-in (Better Auth)", url: "/api/auth/open-api/generate-schema" },
-      ],
-    }),
-  );
+      }),
+    );
+    app.get(
+      "/api/docs",
+      Scalar({
+        pageTitle: "Anime Manga Club API",
+        sources: [
+          { title: "Club API", url: "/api/openapi.json" },
+          { title: "Sign-in (Better Auth)", url: "/api/auth/open-api/generate-schema" },
+        ],
+      }),
+    );
+  }
 
   app.notFound((c) =>
     c.json<ErrorBody>(

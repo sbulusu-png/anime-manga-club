@@ -69,7 +69,7 @@ The layering above comes from a [graphify](https://github.com/safishamsi/graphif
 | Layer    | Choice                                                                               |
 | -------- | ------------------------------------------------------------------------------------ |
 | Website  | Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS 4, GSAP 3 (ScrollTrigger) |
-| API      | Hono 4 on Node.js 24, Zod 4 validation, OpenAPI docs at `/api/docs`                  |
+| API      | Hono 4 on Node.js 24, Zod 4 validation, OpenAPI docs at `/api/docs` (dev only)       |
 | Auth     | Better Auth 1.7 (email/password, Google, username, admin roles)                      |
 | Database | PostgreSQL 18 on Neon, Drizzle ORM and drizzle-kit migrations                        |
 | Email    | Brevo                                                                                |

@@ -115,6 +115,17 @@ describe("API documentation", () => {
       expect.arrayContaining(["/sign-up/email", "/sign-in/email", "/request-password-reset"]),
     );
   });
+
+  it.each(["/api/docs", "/api/openapi.json", "/api/auth/open-api/generate-schema"])(
+    "keeps %s out of production",
+    async (path) => {
+      const { app } = makeApp(db, { env: { NODE_ENV: "production" } });
+
+      const res = await app.request(path);
+      expect(res.status).toBe(404);
+      expect(res.headers.get("content-type")).toContain("application/json");
+    },
+  );
 });
 
 describe("breached passwords", () => {

@@ -25,12 +25,6 @@ export function SiteFooter() {
             </Link>
           </li>
           <li>
-            {/* Served by the API through the /api proxy, so a plain link (not next/link). */}
-            <a href="/api/docs" className="hover:text-ink hover:underline">
-              API docs
-            </a>
-          </li>
-          <li>
             <a
               href="https://anilist.co"
               className="hover:text-ink hover:underline"

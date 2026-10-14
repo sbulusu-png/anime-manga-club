@@ -44,11 +44,22 @@ export function makeAuth(db: TestDb, overrides: Partial<Parameters<typeof create
 
 export function makeApp(
   db: TestDb,
-  overrides: Partial<Pick<AppDeps, "pingDatabase" | "anilist" | "auth" | "tmdb">> = {},
+  {
+    env,
+    ...overrides
+  }: Partial<Pick<AppDeps, "pingDatabase" | "anilist" | "auth" | "tmdb">> & {
+    env?: Partial<AppDeps["env"]>;
+  } = {},
 ) {
   const auth = overrides.auth ?? makeAuth(db);
   const app = createApp({
-    env: { WEB_ORIGIN, NODE_ENV: "test", CLUB_TIMEZONE: "Asia/Kolkata", WEB_PROXY_SECRET },
+    env: {
+      WEB_ORIGIN,
+      NODE_ENV: "test",
+      CLUB_TIMEZONE: "Asia/Kolkata",
+      WEB_PROXY_SECRET,
+      ...env,
+    },
     logger: pino({ level: "silent" }),
     db,
     auth,

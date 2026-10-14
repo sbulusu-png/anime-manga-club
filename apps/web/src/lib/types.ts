@@ -1,4 +1,4 @@
-/** Shapes of the API's JSON responses (see /api/docs). */
+/** Shapes of the API's JSON responses (see /api/docs when running locally). */
 
 import type { Rating } from "./rating";
 

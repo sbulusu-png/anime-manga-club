@@ -87,7 +87,7 @@ Installed Claude plugins used: **gsap-skills** (all frontend motion), **graphify
 - Sessions checked against the database on every request, so sign-out, reset, bans and deletion apply instantly (found and fixed: the 5-minute cookie cache kept revoked sessions alive)
 - Members can delete their account; everything they made goes with it
 - 64 KB body limit, 300 requests/minute per visitor, 30-second timeout, strict CSP, `no-store` on every response, crash logging
-- OpenAPI spec at `/api/openapi.json` and interactive docs at `/api/docs` (plus Better Auth's schema), generated from the validation schemas
+- OpenAPI spec at `/api/openapi.json` and interactive docs at `/api/docs` (plus Better Auth's schema), generated from the validation schemas; local development only, never served in production
 - An end-to-end member journey test; CI migrates and smoke-tests a real Postgres 18 and fails on schema drift
 - `apps/api/README.md`
 

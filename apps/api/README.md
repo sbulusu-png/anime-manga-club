@@ -4,7 +4,7 @@ The backend for the Anime Manga Club: reviews, watchlists, weekly club suggestio
 
 **Stack:** Node.js 24 · TypeScript · Hono · PostgreSQL 18 (Neon) · Drizzle ORM · Better Auth · Zod · Vitest
 
-Interactive API docs are served at `/api/docs` (generated from the routes' own validation schemas).
+Interactive API docs are served at `/api/docs` (generated from the routes' own validation schemas) in local development only; production doesn't serve them.
 
 ## Running it
 
