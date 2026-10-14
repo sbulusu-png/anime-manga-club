@@ -82,7 +82,7 @@ The layering above comes from a [graphify](https://github.com/safishamsi/graphif
 - **Security:** CSRF origin checks everywhere; open-redirect-proof `?next=` links; rate limits per IP and per member; the client IP is resolved from trusted proxies only; strict CSP on the API; breached passwords refused (and the check runs before a reset link is used up); deleting an account needs the password or a recent sign-in; public profiles and reviews never expose real names or emails.
 - **Data integrity:** one review per member per title, verdicts limited to 1–4 and like counts never below zero, all enforced by the database; triggers keep each title's club totals exact even when accounts are deleted; keyset pagination with microsecond-exact cursors, so feeds never skip or repeat.
 - **Caching:** public pages are cached and tagged; a member's own change (a review, a list update, a club pick, a deleted account) clears exactly the affected tags through a server action, so it shows at once. Anything personal is never cached.
-- **Performance:** no 3D or heavy libraries on the page; the background characters load only on wide screens; images are optimised by Next.js; no source maps are published.
+- **Performance:** no 3D or heavy libraries on the page; the background characters load only as they drift into view; images are optimised by Next.js; no source maps are published.
 - **Accessibility:** every colour pair measured at 4.5:1 or better in both themes; reduced-motion respected by every animation; keyboard-friendly menus and forms; 24px minimum tap targets.
 
 ## Project layout
